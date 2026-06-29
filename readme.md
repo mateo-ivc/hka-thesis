@@ -1,6 +1,6 @@
 # HKA-Thesis-Template (Typst)
 
-Typst template for bachelor/master theses at Hochschule Karlsruhe (HKA), optionally in cooperation with a company.
+Typst template for bachelor/master theses at Hochschule Karlsruhe (HKA) in the field of embedded software engineering, optionally in cooperation with a company.
 
 ## Requirements
 
