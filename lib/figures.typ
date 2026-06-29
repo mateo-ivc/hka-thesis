@@ -11,7 +11,7 @@
 )[
   #align(center + horizon)[
     #stack(spacing: 0.65em)[
-      #text(size: 8pt, fill: luma(120), style: "italic")[Grafik folgt — Inhalt unten beschreiben]
+      #text(size: 8pt, fill: luma(120), style: "italic")[Grafik folgt, Inhalt unten beschreiben]
       #par(justify: false, leading: 0.45em)[
         #text(size: 10pt)[#body]
       ]

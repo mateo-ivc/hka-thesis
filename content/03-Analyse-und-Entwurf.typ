@@ -11,10 +11,10 @@ Aus der Problemstellung werden die Anforderungen abgeleitet. Verweise erfolgen Ã
 
 #figure(
   table(
-    columns: (auto, 1fr),
+    columns: (1fr, 5fr),
     tab-h[ID], tab-h[Anforderung],
-    table.cell[FR-1 #label("fr-1")], tab-d[Lorem ipsum dolor sit amet, consetetur sadipscing elitr.],
-    table.cell[FR-2 #label("fr-2")], tab-d[Sed diam nonumy eirmod tempor invidunt ut labore.],
+    table.cell(inset: (x: 6pt, y: 4pt))[FR-1 #label("fr-1")], tab-d[Lorem ipsum dolor sit amet, consetetur sadipscing elitr.],
+    table.cell(inset: (x: 6pt, y: 4pt))[FR-2 #label("fr-2")], tab-d[Sed diam nonumy eirmod tempor invidunt ut labore.],
   ),
   caption: [Funktionale Anforderungen],
 ) <tab:anforderungen>

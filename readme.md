@@ -1,55 +1,52 @@
 # HKA-Thesis-Template (Typst)
 
-Wiederverwendbares Typst-Template für Abschlussarbeiten an der Hochschule Karlsruhe (HKA), optional in Kooperation mit einem Unternehmen. Das Template enthält Titelseite, Eigenständigkeits- und KI-Erklärung, Verzeichnisse, Abkürzungssystem, Grafik-Platzhalter, akademische Tabellen sowie Syntaxhervorhebung für C- und ARM-Assembler-Listings.
+Typst-Template für Abschlussarbeiten an der Hochschule Karlsruhe (HKA), optional in Kooperation mit einem Unternehmen.
 
 ## Voraussetzungen
 
-- **Typst** ≥ 0.12 ([Installation](https://github.com/typst/typst)) oder die VS-Code-Erweiterung *Tinymist*.
-- **Schriften** (sonst werden Ersatzschriften genutzt): Cambria, Arial, Liberation Sans.
-- **Internet** beim ersten Build, damit die Pakete `acrostiche` und `outrageous` aus dem Typst-Universe geladen werden.
+- Typst ab Version 0.12: https://github.com/typst/typst (oder VS-Code-Erweiterung Tinymist)
+- Schriften: Cambria, Arial, Liberation Sans (sonst werden Ersatzschriften genutzt)
+- Internetverbindung beim ersten Build für die Pakete `acrostiche` und `outrageous`
 
 ## Verzeichnisstruktur
 
-```
-template/
-├─ thesis.typ        # Einstiegspunkt: Reihenfolge, Verzeichnisse, Layout, Akronyme
-├─ config.toml       # Metadaten (Autor, Titel, Prüfer, Modi …)
-├─ meta.typ          # Sammelmodul: liest config.toml + bündelt alle Helfer
-├─ typst.toml        # Paket-Manifest + Abhängigkeiten
-├─ bibliography.bib  # Beispiel-Literatur (ersetzen)
-├─ lib/              # Helfer: acronyms.typ, figures.typ, tables.typ
-├─ themes/           # code.typ + *.sublime-syntax / *.tmTheme (C & ARM-Assembler)
-├─ common/
-│  ├─ cover.typ                 # Titelseite
-│  └─ statutory-declaration.typ # KI- + Eigenständigkeitserklärung (Platzhalter)
-├─ content/          # 00 Zusammenfassung + 6 Kapitel (Lorem-Ipsum)
-└─ assets/           # hkalogo.svg, firmenlogo.svg, aufgabenstellung.svg
-```
+- `thesis.typ` - Einstiegspunkt: Reihenfolge, Verzeichnisse, Layout, Akronyme
+- `config.toml` - Metadaten (Autor, Titel, Prüfer, Betreuer, Modi)
+- `meta.typ` - liest config.toml und bündelt alle Helfer
+- `typst.toml` - Paket-Manifest
+- `bibliography.bib` - Beispiel-Literatur (ersetzen)
+- `lib/` - Helfer: acronyms.typ, figures.typ, tables.typ
+- `themes/` - Syntaxhervorhebung für C und ARM-Assembler
+- `common/` - Titelseite (cover.typ) und Erklärungsseite (declaration.typ)
+- `content/` - Zusammenfassung und 6 Kapitel mit Lorem-Ipsum-Platzhaltern
+- `assets/` - hkalogo.svg, firmenlogo.svg, aufgabenstellung.svg
 
 ## Kompilieren
 
 ```powershell
-typst compile thesis.typ          # erzeugt thesis.pdf
-typst watch thesis.typ            # baut bei jeder Änderung neu
+typst compile thesis.typ   # erzeugt thesis.pdf
+typst watch thesis.typ     # baut bei jeder Änderung neu
 ```
 
 ## Anpassen
 
-1. **Metadaten** in `config.toml` setzen: `author`, `title`, `thesis-type`, Prüfer/Betreuer (`reviewer-two`/`advisor-two` leer lassen zum Ausblenden), `university`, `company`, `completion-period`.
-2. **Logos** in `assets/` ersetzen: `firmenlogo.svg` durch das Firmenlogo, ggf. `hkalogo.svg` aktualisieren.
-3. **Erste Seite (Aufgabenstellung)** in `thesis.typ`: `assets/aufgabenstellung.svg` durch das eigene PDF/Bild ersetzen oder den Block entfernen.
-4. **Erklärungen** in `common/statutory-declaration.typ` an die tatsächliche KI-Nutzung und verwendeten Hilfsmittel anpassen.
-5. **Zusammenfassung/Abstract** in `content/00-Zusammenfassung.typ` und Kapitel in `content/` füllen.
-6. **Abkürzungen** in `thesis.typ` (`init-acronyms`) und ggf. `acr-case-forms` in `lib/acronyms.typ` pflegen.
-7. **Quellen** in `bibliography.bib` eintragen, im Text mit `@schluessel` zitieren.
+1. Metadaten in `config.toml` setzen (`reviewer-two` und `advisor-two` leer lassen zum Ausblenden)
+2. Logos in `assets/` ersetzen
+3. Aufgabenstellung in `thesis.typ` eintragen oder den Block entfernen
+4. Erklärungen in `common/declaration.typ` an die eigene KI-Nutzung anpassen
+5. Kapitel in `content/` schreiben
+6. Abkürzungen in `thesis.typ` in `init-acronyms` eintragen
+7. Quellen in `bibliography.bib` pflegen und mit `@schluessel` zitieren
 
-## Modi
+## Modi (config.toml)
 
-- `isDraft` (in `config.toml`): `true` zeigt das DRAFT-Wasserzeichen und `#note[...]`-Anmerkungen.
-- `isTwoSided`: doppelseitiges Layout mit Kapitelbeginn auf ungeraden Seiten.
+- `isDraft`: DRAFT-Wasserzeichen und `#note`-Anmerkungen werden angezeigt
+- `isTwoSided`: doppelseitiges Layout, Kapitel beginnen auf ungeraden Seiten
 
 ## Helfer
 
-- `fig-platzhalter-klein/mittel/gross` — Grafik-Platzhalter; `tab-h`/`tab-d` — Tabellenzellen.
-- `c-listing` / `asm-listing` — Code mit Zeilennummern; `req("FR-1")` — Querverweis auf Anforderung.
-- `acr-emph` / `acrpl-emph` — Akronym-Erstnennung; `acr-cap` — Kurzform für Beschriftungen.
+- `fig-platzhalter-klein/mittel/gross`: Grafik-Platzhalter
+- `tab-h` / `tab-d`: Tabellenzellen für akademische Tabellen
+- `c-listing` / `asm-listing`: Code mit Zeilennummern
+- `req("FR-1")`: Querverweis auf Anforderung
+- `acr-emph` / `acrpl-emph`: Akronym-Erstnennung; `acr-cap`: Kurzform für Beschriftungen

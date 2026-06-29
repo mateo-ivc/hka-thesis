@@ -5,7 +5,7 @@
 #set document(title: title, author: author, keywords: keywords)
 
 // Abkürzungen (Erstverwendung = Langform + Abkürzung, danach nur Abkürzung)
-// Beispiele — durch eigene Abkürzungen ersetzen oder ergänzen.
+// Beispiele: durch eigene Abkürzungen ersetzen oder ergänzen.
 #init-acronyms((
   "ECU": ("Steuergerät", "Steuergeräte"),
   "CAN": ("Controller Area Network",),
@@ -21,7 +21,7 @@
   background: if isDraft { rotate(24deg, text(150pt, fill: rgb("dedede66"))[*DRAFT*]) },
 )
 
-// Erste Seite: Aufgabenstellung (Platzhalter) — bei mehrseitigem PDF weitere
+// Erste Seite: Aufgabenstellung (Platzhalter). Bei mehrseitigem PDF weitere
 // #image(...) mit page: 2, page: 3 ... ergänzen oder diesen Block entfernen.
 #[
   #set page("a4", margin: 0pt, background: none)
@@ -32,7 +32,7 @@
 #set text(size: 12pt)
 
 // Eigenständigkeits- und KI-Erklärung
-#include "common/statutory-declaration.typ"
+#include "common/declaration.typ"
 #pagebreak(to: if isTwoSided { "odd" } else { none })
 
 // Titelseite
