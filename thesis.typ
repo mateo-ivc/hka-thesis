@@ -4,6 +4,12 @@
 
 #set document(title: title, author: author, keywords: keywords)
 
+// Document language (also drives smart quotes „…" and correct German
+// hyphenation patterns for justified paragraphs, see #set par(justify: true)
+// below). Without this, Typst falls back to English hyphenation rules,
+// which is the generic cause of incorrect line breaks throughout the text.
+#set text(lang: "de", region: "DE")
+
 // Acronyms (first use = long form + abbreviation, afterwards abbreviation only)
 // Examples: replace or extend with your own acronyms.
 #init-acronyms((
