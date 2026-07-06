@@ -3,18 +3,25 @@
 
 = Einleitung
 
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum @beispielBuch2025. Hier wird das Thema eingeführt und in einen größeren Kontext gestellt.
+Kurze beschreibung was  802.1AS ist und wo es verwendet wird:
+
+"Trichter-Prinzip" \ 
+Wieso wird Echtzeitkommunikation immer relevanter? Wieso stößt normales Ethernet an seine grenzen und was sind die folgenden Probleme. TSN als Lösung. Grundbaustein davon ist 802.1AS (Zeitsynchronisation) \
+Wie relevant ist das auf embedded Systemen? Und wieso braucht man ein RTOS dafür?
+
 
 #note[Anmerkungen erscheinen nur, solange `isDraft` in `config.toml` aktiv ist.]
 
-#fig-platzhalter-gross(
-  caption: [Großer Grafik-Platzhalter (100 %)],
-  label: <fig:gross>,
-)[Hier soll später eine Abbildung stehen, vgl. @fig:gross.]
 
 == Motivation
+Was ist die Motivation hinter dem Thema. Wieso sollten sich andere Personen/Industrien damit beschäftigen?\ 
+Generell arbeitet Etherent nach dem best effort Prinzip und kommt damit mit gewisser Zeit an seine Grenzen. Problematisch wird es dann bei Systemen die eine Gewisse Echtzeitanfoderung haben. Damit diese kritischen System trotzdem ohne Probleme Funktionieren wurden eine reihe and Standards entwickelt die man unter den Namen Time-Sensitive-Networking kennt. Der grundbaustein dafür Bildet das Synchronisieren der Clocks zwischen den Verschiedenen Systemen. 
+Jede Clock im System muss über ein Grundverständniss über Zeit besitzen.
 
-Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet @beispielArtikel2024. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore.
+Wieso spielen Embedded Systeme hier auch eine große Rolle?
+Das Linux von Mikrokontrollern
+Hat den vorteil, dass der Code Plattfromunabhängig ist. 
+Embedded Systeme sind meist Kostengünstiger und Energieeffizienter. 
 
 #fig-platzhalter-mittel(
   caption: [Mittlerer Grafik-Platzhalter (80 %)],
@@ -23,7 +30,11 @@ Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit ame
 
 == Problemstellung
 
-Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis. Ein Akronym als Beispiel: #acr-emph("CAN").
+Um ZephyrRTOS effektiv in TSN-Netzwerken einzusetzen, muss das Synchronisieren nicht nur zwischen Endknoten funktionieren, sondern auch zuverlässig als Bridge, um die Zeitinformationen präzise weeiterzuleiten.
+
+Aktuell existier im Quellcode von Zephyr eine Implementierung von des IEEE802.1AS protokolls welches auch das Bridging implementiert, allerdings wurde diese nie in der Praxis validiert.
+
+Dadurch ist es unklar ob diese Implementierung auf den verschiedenen Systemen den strikten Genauigkeitsanforderungen des Standards erfüllen.
 
 #fig-platzhalter-klein(
   caption: [Kleiner Grafik-Platzhalter (50 %)],
@@ -32,4 +43,4 @@ Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie co
 
 == Zielsetzung
 
-At vero eos et accusam et justo duo dolores et ea rebum. Beschreiben Sie hier das Ziel und den Aufbau der Arbeit.
+Das Hauptziel der Arbeit besteht darin, die bisher unvalidierte Bridge-Funkitonalität des IEEE 802.1AS-Protokolls in ZephyrRTOS zu validieren. Um eine präzise aussage über die Synchronisationsfähigkeit im Bridge-Betrieb treffen zukönnen, wird im Rahem dieser Arbeit ein dediziertes Hadrware-Test-Setup aufgebaut. Die experimentelle Validerung erfolgt über die messtechnische Erfassung und Analyse von Pulse-Per-Second Signalen mittels eines Oszilloskops. Die daraus geweonnen Daten dienen als Grundlage, um die Eignung des aktuellen Zephyr-Protokolltapels zu bewerten.

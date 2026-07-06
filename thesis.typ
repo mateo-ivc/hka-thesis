@@ -200,7 +200,7 @@
 #include "content/02-foundations.typ"
 #include "content/03-analysis-and-design.typ"
 #include "content/04-implementation.typ"
-#include "content/05-evaluation.typ"
+#include "content/05-Evaluation.typ"
 #include "content/06-conclusion-and-outlook.typ"
 
 #openright()
@@ -215,6 +215,7 @@
 // Comparing against the page of the (last) level-1 heading — which is the
 // bibliography heading — also excludes any blank page inserted beforehand from
 // the page number and header.
+
 #set page(
   footer: context {
     let loc = here()

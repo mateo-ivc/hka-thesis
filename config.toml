@@ -5,7 +5,7 @@
 is-draft = true                 # true: DRAFT-Wasserzeichen + Anmerkungen sichtbar
 is-two-sided = false            # true: doppelseitiges Layout (gerade/ungerade)
 
-author = "Vorname Nachname"
+author = "Mateo Ivankovic"
 title = "Titel der Abschlussarbeit"
 thesis-type = "Thesis" # z. B. Master-Thesis, Projektarbeit
 keywords = []
