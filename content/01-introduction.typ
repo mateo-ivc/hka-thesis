@@ -6,7 +6,7 @@
 Kurze beschreibung was  802.1AS ist und wo es verwendet wird:
 
 "Trichter-Prinzip" \ 
-Wieso wird Echtzeitkommunikation immer relevanter? Wieso stößt normales Ethernet an seine grenzen und was sind die folgenden Probleme. TSN als Lösung. Grundbaustein davon ist 802.1AS (Zeitsynchronisation) \
+Wieso wird Echtzeitkommunikation immer relevanter? Normales Ethernet an seine grenzen und was sind die folgenden Probleme. TSN als Lösung. Grundbaustein davon ist 802.1AS (Zeitsynchronisation) \
 Wie relevant ist das auf embedded Systemen? Und wieso braucht man ein RTOS dafür?
 
 
