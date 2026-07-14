@@ -22,7 +22,7 @@
       rows: (auto),
       align: (left + horizon, right + horizon),
       [#image("../assets/hkalogo.svg", width: 180pt)],
-      [#image("../assets/firmenlogo.svg", width: 180pt)],
+      [#image("../assets/inovex_logo.svg", width: 120pt)],
     )
 
     #pad(top: 75pt)[
