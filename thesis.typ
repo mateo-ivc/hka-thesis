@@ -16,6 +16,20 @@
   "ECU": ("Steuergerät", "Steuergeräte"),
   "CAN": ("Controller Area Network",),
   "API": ("Application Programming Interface",),
+  "gPTP": ("generalized Precision Time Protocol",),
+  "TSN": ("Time-Sensitive Networking",),
+  "RTOS": ("Real-Time Operating System",),
+  "PTP": ("Precision Time Protocol",),
+  "NTP": ("Network Time Protocol",),
+  "MAC": ("Media Access Control",),
+  "PHY": ("Physical Layer",),
+  "RMII": ("Reduced Media Independent Interface",),
+  "PPS": ("Pulse Per Second",),
+  "GM": ("Grandmaster Clock",),
+  "BMCA": ("Best Master Clock Algorithm",),
+  "P2P": ("Peer-to-Peer",),
+  "E2E": ("End-to-End",),
+  "FIFO": ("First In, First Out",),
 ))
 
 // Short forms only in the list of abbreviations (body text stays with short/short-pl)

@@ -12,30 +12,17 @@ Erklärt werden soll hier wie:
   - Sync, pDelay, ...
 
 == Time-Sensitive Networking
-Warum reicht normales Ethernet für Echtzeitanwendungen?
-- Best-Effort-Prinzip, fehlende Determinismus
+Standard-Ethernet wurde für den maximalen Durchsatz und Fehlertoleranz konzipiert, arbeitet jedoch nach dem Best-Effort-Prinzip. Dies führt in industriellen Anwendungen zu unvorhersehbaren Verzögerungen (Jitter) und Paketverlusten, da Switches Pakete in Warteschlangen (Queues) puffern und bei Überlast verwerfen. Für zeitkritische Steuerungsanwendungen ist jedoch ein deterministisches Zeitverhalten zwingend erforderlich, bei dem die maximale Übertragungsdauer (Bounded Latency) garantiert ist.
 
-Welche Rolle spielt die Zeitsynchronisation:
-- TSN besteht aus mehreren Rollen, als Grundbaustein steht gPTP im vordergrund um nachfolgende Protokolle wie Time-Aware Shaper (802.1Qbv) erst zu ermöglichen.
-
+Time-Sensitive Networking (TSN) erweitert das klassische Ethernet um Mechanismen auf Layer 2 des ISO/OSI-Modells, um diesen Determinismus zu gewährleisten. Das Fundament aller TSN-Mechanismen ist eine gemeinsame Zeitbasis aller Netzwerkknoten. Diese wird durch den Standard IEEE 802.1AS bereitgestellt.
 
 == Das Zeitsynchronisationsprotokoll IEEE 802.1AS
-Dieses Kaptiel beschreibt das Zeitsynchronisationsprotokoll IEEE 802.1AS, das im TSN-Kontext auch als gPTP (Generalized Precision Time Protocol) bezeichent wird. gPTP definiert Verfahren, um die Uhren verteilert System über ein lokases Netzwerk im Sub-Mikrosekundenbereich zu synchronisieren. Im Folgenden werden die Abgrenzungen zu anderen Protokollen, die Netzwerktopologie, die Synchronisations- und Messmechanismen sowie die Rolle einer gPTP-Bridge im Detail erläutert.
+Dieses Kaptiel beschreibt das Zeitsynchronisationsprotokoll IEEE 802.1AS, das im TSN-Kontext auch als gPTP (Generalized Precision Time Protocol) bezeichent wird. gPTP definiert Verfahren, um die Clocks verteilert System über ein lokases Netzwerk im Sub-Mikrosekundenbereich zu synchronisieren. Im Folgenden werden die Abgrenzungen zu anderen Protokollen, die Netzwerktopologie, die Synchronisations- und Messmechanismen sowie die Rolle einer gPTP-Bridge im Detail erläutert.
 
 
 === Einordnung und Abgrenzung
 Um die Notwendigkeit von gPTP besser zu verstehen, muss es gegeüber dem im Internet etablierten Network Time Protocol (NTP) sowie dem ursprünglichem Precision Time Protocol (PTPv2/IEEE 1588) abgegrenzt werden.
-//todo: vergleichs tabelle mit vergleich zwischen den verschieden protokollen
 
-/*
-Genauigkeit     | wie genau synchronisiert das protokoll (ms, ns,...?)
-Hardwarebedarf  | welche extra Hardware benötigt es
-Netzwerktyp     | in welchen Netzwerken wird es verwendent (LAN, WLAN, lokal, ...)
-Architektur     | art der Synchoronisierung (E2E, P2P)
-Komplexität     | wie komplex ist die implementierung
-Einstatzgebiert | wo ist es sinnvoll das protokoll zu verwenden
-
-*/
 #figure(
   table(
     columns: (1.5fr, 1.8fr, 2fr, 2fr),
@@ -57,71 +44,73 @@ Einstatzgebiert | wo ist es sinnvoll das protokoll zu verwenden
   caption: [Vergleich NTP, PTPv2 und gPTP],
 )<comparison-ptp-gptp>
 
-Eigentlich setzt NTP einen standard was die Synchronisierunge der System angeht. Leider is diese nur bis zu einer gewissen Genauigkeit möglich und ist desweiteren so Konzipiert, abweichungen bis in den Milliskeundenbereich zu tollerieren. \
-In der industriellen Automatisierung oder im Automobilbereich werden Genauigkeiten bis in den Nanosekundebreich gefordert. Diese Präzision biete PTPv2 auch, nur scheitert es hier bei der Interoperabilität. Da der Standard über 100 Konfigurationsoptionen und Profile offenlässt. gPTP löst dies, indem es eine festes und spezifischer definierteres Profil darstellt. Es erzwingt die P2P-Laufzeitmessung, schreibt feste Nachrichtenraten vor und automatisiert die Netzwerkkonfiguration
+
+NTP stellt das Standardverfahren für die allgemaine Systemzeitsynchronistation im IT-Bereich dar. Es ist darauf ausgelegt, Netzwerklatenzen und Routenänderungen im Internet oder in Weitverkehrsnetzen statistisch auszugleichen, toleriert dabei jedoch Abweichungen im Milliskeundenbereich. Für Anwendungen in der industriellen Automotisierung oder im Automobilbereich sind jedoch Präzisionen im Nanosekundebreich erforderlich.
+
+Diese Genauigkeit wird durch das Precision Time Protocol (PTPv2) erreicht, welches vor allem durch Hardware-Timestamping die Paketlaufzeit sehr genau erfasst. PTPv2 wurde als flexibler Baukasten konzipiert und definiert über 100 Konfigurationsoptionen und Profile für verschiedene Industrien. Diese Flexibilität führt in der Praxis jedoch häufig yu Interoperabilitätsproblemen zwischen Geräten unterschiedlicher Hersteller.
+
+Das Protokoll gPTP löst dieses Problem, indem es ein fest definiertes, stark eingeschränktes Profil von PTPv2 vorschreibt. Es eliminiert optionale Parameter und erzwingt standardmäßig die P2P-Laufzeitmessung, feste Nachrichtenraten und eine automatisierte Best Master Clock Algorithm (BMCA) Konfiguration. Dadruch wird ein Plug-and-Play Verhalten für lokale, zeitkritische Ethernet-Netzwerke realisiert.
 
 === Rollen und Netzwerktopologie
-- gPTP-Domäne: logische Gruppe von Geräten die synchron zueinander laufen.
+Eine gPTP-Domäne definiert eine logische Gruppierung von Geräten, die über das Netzwerk miteinander kommunizieren und auf eine gemeinsame Zeitbasis synchronisiert werden. Innerhalb dieser Topologie übernimmt jedes Gerät eine spzifische Rolle ein. Die Netzwerkschnittstellen (Ports) eines Gerätes können dabei in verschieden Zustände versetzt wereden.
 
-- Rollen der Geräte:
-  - Grandmaster Clock (GM): Die Referenzuhr für die Gesamte Domäne
-  - Time-Aware Bridge: Verbindet Netzwerksegemente. Sie synchronisieren sich an einem Port als Slave und fungieren am anderen Port als Master
-  - Timer-Aware Endstation: Endpoint welche sich nur Synchronisiert.
+In einer gPTP-Domäne wird zwischen drei primären Gerätetypen unterschieden:
 
-- Rollen der Ports:
-  - Master Port: Sendet Synchronisations- und pDelay-Nachrichten aus.
-  - Slave Port: Empfängt Synchronisationsdaten um die eigene Uhr zu synchronisieren. Sendet ebenfalls pDelay-Nachrichten.
-  - Disabled: Nimmt nicht an der Synchronisation teil.
+- *Grandmaster Clock (GM):* Die GM bildet die oberste Zeitreferenz für die gesamte Domäne. Sie verfügt in der Regel über eine hochpräzise Zeitquelle und verteilt ihre Zeit im Netzwerk.
 
+- *Time-Aware Bridge:* Diese verbindet verschiedene Netzwerksegmente (vergleichbar mit einem Switch) und leitet Synchronisationsdaten weiter. Um Akkumulationseffekte von Verzögerungen zu vermeiden, nimmt sie eine aktive Rolle im Protokoll ein. Die Ports einer Bridge können dabei verschieden Rollen einnehmen:
+  - *Master Port:* Dient als Zeitquelle für das angeschlossene Netzwerk. Sendet periodisch Synchronisationsnachrichten, um das Nochfolgende Gerät zu Synchronisieren.
+  - *Slave Port:* Empängt die Synchronisationsnachrichten der übergeordneten Clock, um die eigene lokale Clock zu Synchronisieren.
 
-=== Der Synchronisationsmechanismus
+- *Time-Aware Endstation:* Endstationen stellen die Endpunkte der Zeitsynchronisationshierarchie dar. Sie empfangen die Zeitinformationen, synchronisieren ihre lokale Uhr darauf, leiten diese jedoch nicht an andere Geräte weiter.
 
-*Note*: Hier will ich nur den Mechanismus zwischen zwei Systemen erklären. Damit ich im späteren Kaptiel (gPTP Bridge) erklären kann, wieso eine Bridge benötigt wird. Dort soll z.B der Begriff gPTP Domäne beschrieben werden und die verschiedenen Portstate erklärt werden.
+=== Die Sync-Nachricht
 
+Um das Prinzip der Zeitsynchronisierung zu verstehen, muss zunächst die Funktionsweise einer Clock in digitalen System verstanden werden. Jeder CPU besitzt einen internen Taktgeber (Hardware-Oszillator), der als Frequenzquelle dient.
+Ein Hardware-Timer zählt die Schwingungen dieses Oszillators und bildet daraus die lokale Systemzeit ab. Aufgrund von Fertigungstoleranzen, Temparaturschwankungen und Alterungen weisen diese Quarze jedoch eine geringfügige Frequenzabweichung sowie einen Phasenversatz zur Refferenzzeit auf. Ohne eine dauerhafte Korrektur laufen die Uhren im Laufe der Zeit auseinander.
 
-
-Was wird eigentlich genau Synchronisiert?\
-Letztendlich hat jeder Mikrocontroller einen Timer der hochzählt. Diese ist durch eine Hardware Clock angetribene.
-
-In einer gPTP-Domäne gibt es eine Grandmaster Clock geben. Diese ist der Taktgeber für alle Timer-Aware Systeme in der Domäne. Damit sich eine System mit seinem Nachbarn synchronisiert wird der Sync-Mechanismus benötigt.
-
-Der Sync Mechanismus definiert letzendlich wie schnell das hochzählen erfolgen soll. Damit die frequenz mit der Master-Clock übereinstimmt wurde sich folgendes Prinzip überlegt:
-
+Der Synchronisationsmechanismus gleicht diesen Versatz aus, indem die lokale Clock periodisch an die Zeitbasis des Masters angepasst wird. Hierbei unterscheidet der Standard zwischen zwei Verfahren: dem *Two-Step*- und dem *Single-Step*-Verfahren, wie in @sync-mechanism dargestellt.
 #figure(
   image("../assets/Sync/gPTP-sync-mechanism.png", width: 80%),
   caption: [Darstellung des Sync-mechanismus],
 ) <sync-mechanism>
 
-@sync-mechanism Sieht man 2 verfahren wie die Synchronisierung erfolgen kann. \ Link das two-step verfahren:
 
-Hier wird werden 2 aufeinander Folgenden Nachirchten versendet. 1. die Sync Nachricht. Diese Dient dazu die Zeit zwischen Master und Slave herauszufinden. Dabei wird der egress timestamp t1 und der ingress timestamp t2 aufgenommen. t1 wird anschließend mit zwei weiteren Infromationen, dem correctionField und der rateRatio durch die Follow_UP Nachricht zum Slave gesendet.
-Diese berechnen im anschluss wie genau die Lokale Clock zum Master Synchronisiert ist.
+Bei dem im @sync-mechanism (linke Seite) dargestellten Two-Step-Verfahren erfolgt der Austausch in zwei Schritten:
 
-Beeim single-step verfahren ist der einzige Unterschied, dass die Sync-Nachircht bereits alle werte enthält die die Follow_UP Nachricht somit nicht benötigt wird. Das Funktioniert dadruch, dass der Timestamp t1 beim verlassen der Nachricht in das Ethernet-Frame geschrieben wird.
+1. Sync-Nachricht: Der Master sendet eine Sync-Nachricht an den Slave. Dabei werden der Sendezeitpunkt ($t_{s}$) auf Master-Seite und der Empfangszeitpunkt ($t_{r}$) auf Slave-Seite erfasst.
 
-Eventuell noch hier erklären wieso man P2P anstelle von E2E verwedent.
+2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt (preciseOriginTimestamp), das correctionField sowie die rateRatio.
+
+Dieser kann auch in einem Schritt erfolgen. Dabei werden wie in der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen im Sync-Paket übermittelt. Dies
+
 
 === Messung der Leitungsverzögerung
-Ein weiterer wichtiger Mechanismus ist das berechenen des `propagation Delays`. In kurz wird hier berechnet, wie lange sich ein Paket auf der physischen Leitung befindent. Der Mechanimus funktioniert dabei wiefolgt.
+Ein weiterer wichtiger Mechanismus ist das berechenen des `propagation Delays`. Hierbei wird ermittelt, wie lange ein Paket auf der physischen Leitung benötigt.
 
 #figure(
   image("../assets/Sync/gPTP-pDelay-mechanism.png", width: 80%),
   caption: [Darstellung des pDelay-Mechanismus],
 ) <pDelay-mechanism>
 
-Ingsesamt werden 3 arten von Nachirchten versendent. Der initiator sendet zuerst ein `pDelay_Req`. Dabei wird beim egress der Nachricht der Zeitstemepl `t1` und beim ingress der Zeitstempel `t2` aufgenommen. Dadruchr lässt sich die Zeit herausfinden, die das Paket in eine Richtung benötigt. Anschließend Sendet der Empfänger das Pakter `pDelaty_Resp` zurück. Auch hier werden wieder beim egress (`t3`) und ingress (`t4`) Zeitstemepl aufgenommen. Die Letzte Nachricht `pDelay_Resp_Follow_Up` wird zuletzt gesendetn um den aufgenommen Zeitstemepl `t3` zu übermitteln.
+Der Mechanismus nutzt drei Arten von Nachrichten:
+Der Initiator sendet zuerst ein `pDelay_Req`. Dabei wird beim Senden der Nachricht der Zeitstempel $t_1$ und beim Empfangen durch den Partner der Zeitstempel $t_2$ aufgenommen. Anschließend sendet der Empfänger das Paket `pDelay_Resp` zurück, wobei die Zeitstempel $t_3$ (Senden) und $t_4$ (Empfangen) erfasst werden. Mit der Nachricht `pDelay_Resp_Follow_Up` wird zuletzt der Zeitstempel t3 an den Initiator übermittelt.
 
-Da der Initiator nun alle Zeitstempel hat, kann dieser nun die Berechnung durchführen.
-
-Die Formel sieht wiefolgt aus:
+Da der Initiator nun alle vier Zeitstempel besitzt, kann die Berechnung wiefolgt durchgeführt werden:
 
 $t_("ir") = t_2 - t_1\
 t_("ri") = t_4 - t_3\
 D = (t_("ir") + t_("ri"))/2 = ((t_4 - t_1) - (t_3 - t_2))/2$
 
-Das Ergbnis unter D steht dabei für den Durchschnittlichen `propagation Delay`
+Das Ergebnis $D$ entspricht dem durchschnittlichen `propagation Delay`.
+=== Der Synchronisationsmechanismus
+Nachdem der Slave alle Informationen erhalten hat, führt er die finale Synchronisation der lokalen Clock durch. Dieser Prozess besteht aus drei Schritten:
 
-Der primäre Nutzen der Rechnung ist für die Berechnung des
+1. Berechnung der korrigierten Zeit: Der Slave nutzt den `precisionOriginTimestamp` als Basiszeit des Grandmasters und addiert das `correctionField` hinzu. Das `correctionField` kompensiert dabei Laufzeitdifferenzen, die durch Zwischenkonoten entstanden sind. Die Summer ergbit die synchronisierte Zeit zum Zeitpunkt des Absendens der Sync-Nachricht.
+
+2. Einbeziehung der Leitungsverzögerung: Um den absoluten Zeitversatz zur Master-Uhr zu bestimmen, addiert der Slave die zuvor gemessene Leitungsverzögerung ($D$) zu der korrigierten Zeit. Der Vergleich mit dem eigenen Empfangszeitpunkt ($t_r$) ergibt den aktuellen Offset, um den die lokale Uhr korrigiert werden muss.
+
+3. Frequenzanpassung (Syntonisierung): Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet der Slave die rateRatio. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.
 
 === gPTP Bridge
 *Note*: Hier soll dem Leser näher gebracht werden was eine Bridge wirklich macht. Sie dient nicht dem Stumpfen weiterleiten von Nachrichten. Die Bridge nimmt aktive am Protokoll teil und terminiert die Synchronisation auf einer Seite als Slave-Port, agiert allerdings auf dem anderen Port als Master um nachfolgende Systeme zu synchronisieren.
