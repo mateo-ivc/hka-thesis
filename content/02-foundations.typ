@@ -106,39 +106,45 @@ Das Ergebnis $D$ entspricht dem durchschnittlichen `propagation Delay`.
 === Der Synchronisationsmechanismus
 Nachdem der Slave alle Informationen erhalten hat, führt er die finale Synchronisation der lokalen Clock durch. Dieser Prozess besteht aus drei Schritten:
 
-1. Berechnung der korrigierten Zeit: Der Slave nutzt den `precisionOriginTimestamp` als Basiszeit des Grandmasters und addiert das `correctionField` hinzu. Das `correctionField` kompensiert dabei Laufzeitdifferenzen, die durch Zwischenkonoten entstanden sind. Die Summer ergbit die synchronisierte Zeit zum Zeitpunkt des Absendens der Sync-Nachricht.
+1. *Berechnung der korrigierten Zeit:* Der Slave nutzt den `precisionOriginTimestamp` als Basiszeit des Grandmasters und addiert das `correctionField` hinzu. Das `correctionField` kompensiert dabei Laufzeitdifferenzen, die durch Zwischenkonoten entstanden sind. Die Summe ergbit die synchronisierte Zeit zum Zeitpunkt des Absendens der Sync-Nachricht.
 
-2. Einbeziehung der Leitungsverzögerung: Um den absoluten Zeitversatz zur Master-Uhr zu bestimmen, addiert der Slave die zuvor gemessene Leitungsverzögerung ($D$) zu der korrigierten Zeit. Der Vergleich mit dem eigenen Empfangszeitpunkt ($t_r$) ergibt den aktuellen Offset, um den die lokale Uhr korrigiert werden muss.
+2. *Einbeziehung der Leitungsverzögerung:* Um den absoluten Zeitversatz zur Master-Uhr zu bestimmen, addiert der Slave die zuvor gemessene Leitungsverzögerung ($D$) zu der korrigierten Zeit. Der Vergleich mit dem eigenen Empfangszeitpunkt ($t_r$) ergibt den aktuellen Offset, um den die lokale Uhr korrigiert werden muss.
 
-3. Frequenzanpassung (Syntonisierung): Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet der Slave die rateRatio. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.
+3. *Frequenzanpassung (Syntonisierung):* Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet der Slave die rateRatio. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.
 
-=== gPTP Bridge
-*Note*: Hier soll dem Leser näher gebracht werden was eine Bridge wirklich macht. Sie dient nicht dem Stumpfen weiterleiten von Nachrichten. Die Bridge nimmt aktive am Protokoll teil und terminiert die Synchronisation auf einer Seite als Slave-Port, agiert allerdings auf dem anderen Port als Master um nachfolgende Systeme zu synchronisieren.
+=== Die gPTP Bridge
+Anders als ein klassicher Ethernet-Switch, der Frames auf Layer 2 im Store-and-Forward-Verfahren rein weiterleitet, nimmt eine Time-Aware Bridge aktiv am gPTP-Protokoll teil. Dabei terminiert die Bridge eingehende Sync-Nachrichten auf dem Slave-Port und generiert auf den Master-Ports eigene, neue Sync- und Follow_Up Nachrichten für die nachfolgenden Geräte. Diese aktive Beteiligung ist notwendig, damit sowohl die im vorherigen Abschnitt beschriebenen Leitungsverzögerungen als auch die interne Verarbeitsungszeit an jedem Hop korrekt kompensiert werden und sich Messfehler nicht unkontrolliert über mehrere Bridges hinweg akkumulieren.
 
-Aufgaben die erläutert werden müssen:
-- Empfangen der Sync Nachricht auf dem Slave-Port
-- Messen der residenceTimer auf dem System
-- Senden der neuen Sync-Nachricht auf allen Master-Ports
-- Aktuallisieren des correctionFields und der rateRatio in der Follow_UP-Nachricht
+Damit die Bridge eine eingehende Sync-Nachricht korrekt an ihre Master-Ports weiterleiten kann, sind folgende Schritte notwendig:
 
+1. *Empfangen auf dem Slave-Port:* Die Bridge empfängt die Sync-Nachricht und erfasst analog zum in @sync-mechanism dargestellten Verfahren den Empfangszeitpunkt $t_r$.
+
+2. *Messung der `residence time`:* Bevor die Bridge die Nachricht weiterleiten kann, durchläuft diese intern den Netzwer-Stack des Geräts. Die dafür benötigte Zeitspanne bis zum Abesende auf dem Master-Port zum Zeitpunkt $t_s$ wird als `residence time` bezeichent und ergibt sich aus $t_s - t_r$.
+
+3. *Aktualisierung der `rateRatio`:* Die Bridge verknüpft die im Follow_Up empfangene `rateRatio` mit der über den in Abbildung 2.2 beschriebenen pDelay-Mechanismus lokal gemessenen `neighborRateRatio` (dem Frequenzverhältnis zur Master Clock): $ "rateRatio"_("neu") = "rateRatio"_("alt") dot "neighborRateRatio" $
+  Dadurch bleibt die `rateRatio` über beliebig viele Hops hinweg gültig und beschreibt stets das Frequenzverhältnis zwischen der Grandmaster Clock und der lokalen Clock der Bridge.
+
+4. *Frequenzanpassung (Syntonisierung):* Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet die Bridge die rateRatio. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.
 
 
 == Hardware Grundlagen
+=== Hardware-Timestamping
+Wie in @comparison-ptp-gptp dargestellt, erfordert gPTP eine Genauigkeit im Sub-Mikrosekundenbereich. Diese Anforderung hat direkte Konsequenzen für die Art und Weise, wie die Zeitstempel erfasst werden müssen.
+
+Eine naheliegende Möglichkeit wäre, den Zeitstempel rein in Software zu erfassen, etwa in dem Moment, in dem die Applikation oder der Netzwerktreiber ein empfangenes Paket verarbeitet. Ein solcher Zeitstempel unterliegt jedoch mehreren nicht-deterministischen Verzögerungsquellen.
+//todo: welche quellen?
+Diese Verzögerungen summieren sich auf, das Abweichungen im Bereich mehrerer zehn bis hundert Mikrosekunden enstehen und damit zu einem Vielfachen der von gPTP geforderten Genauigkeit abweicht. Reines Software-Timestamping ist damit für gPTP ungeeignet.
+
+Aus diesem Grund wird für gPTP-fähige Systeme dedizierte Netzwerk-Hardware benötigt, die in der Lage ist, Zeitstempel autonom zu erfassen: Die Erfassung erfolgt direkt durch eine Logikeinheit in der Netzwerk-Hardware selbst, ausgelöst durch das tatsächliche Auftreten des Signals, und ist damit unabhängig von der aktuellen Auslastung der CPU oder des Betriebssystems. Diese Fähigkeit ist nicht bei jeder Ethernet-Hardware gegeben, sondern setzt entsprechend ausgestattete MAC-Controller bzw. PHY-Bausteine voraus.
+
 === PHY vs. MAC Timestamping
-Wieso spielt das eine große Rolle?
--> Wichtig für den pDelay. Es wird ein Hardware Timestamp aufgenommen, sobald the PHY das erste Bit einer Ethernet Messages einließt. \
-Bei PHY Timestamping ist das am genausten, da der PHY den timestamp on the fly in den frame schreibt. \
-Bei MAC Timestamping bekommt der MAC von dem PHY ein Signal, dass ein Frame eingelesen wurde und nimmt darauf den Timestamp auf. Nachteil ist, dass es zu einer Leichten verzögerung kommt.
+Für die im vorherigen Abschnitt beschriebenen Mechanismen — insbesondere die Messung der Leitungsverzögerung sowie der `residence time` — ist die Genauigkeit der Zeitstempel $t_1$ bis $t_4$ bzw. $t_r$ und $t_s$ entscheidend. Ein Hardware-Zeitstempel wird dabei erfasst, sobald ein definiertes Referenzsignal ( der Start Frame Delimiter, SFD) einer Ethernet-Nachricht erkannt wird. Je nachdem, an welcher Stelle im Signalpfad dieser Zeitpunkt erfasst wird, unterscheidet der Standard zwei Verfahren:
 
-Erklären, wieso sich hier gegen PHY Timestamping entschieden wurde.
-PHY Timestamping ist eigentlich der Goldenestandard, da man hier die genauste Zeit erhält. Allerdings ist MAC-Timestamping wesentlich einfacher zu verwenden.
+- *PHY-Timestamping:* Der Zeitstempel wird direkt im Physical-Layer-Baustein (PHY) erfasst, in dem Moment, in dem das Signal auf der physischen Leitung erkannt wird. Da hier keine weitere Verarbeitung oder Signalübertragung zwischen Erfassung und physischer Leitung liegt, gilt dieses Verfahren als das genaueste.
 
-Auserdem erklären was der unterschied zwischen MAC und PHY is Layern 1 und Layer 2
-wichtig ist hier auch, dass man bei PHY keine kompensation für die Layerlatenz benötigt, was zu abweichungen in der pDelay-Berechnung fürhren kann
-Desweiteren RMII erklären, das sich MAC Timestamping hierauf stützt. Die Taktung dieser Schnittstelle ist auch nicht ganz unwichtig, da bei 50MHz trotzdem eine physikalische Latenz zwischen PHY und MAC ensteht die berücksichtigt werden muss.
+- *MAC-Timestamping:* Der Zeitstempel wird erst in der Media-Access-Control-Schicht (MAC) erfasst, nachdem der PHY dem MAC über eine dedizierte Schnittstelle signalisiert hat, dass ein Frame eingelesen wurde. Zwischen der eigentlichen physischen Ankunft des Signals und der Zeitstempel-Erfassung liegt dadurch eine zusätzliche, von der verwendeten Schnittstelle abhängige Latenz.
 
-=== Schnitesellen und Latenzen
-
+Diese zusätzliche Latenz stellt keinen reinen Nachteil dar, sofern sie bekannt und konstant ist: Der Standard sieht mit den Korrekturgrößen `ingressLatency` und `egressLatency` einen Mechanismus vor, um Zeitstempel unabhängig vom tatsächlichen Erfassungspunkt auf eine gemeinsame Referenzebene (die *reference plane* an der Media Dependent Interface, MDI) zurückzurechnen  Voraussetzung dafür ist jedoch, dass diese Latenz hinreichend deterministisch ist.
 
 == Das Echtzeitbetriebssystem Zephyr
 
@@ -161,7 +167,7 @@ Um die Integration von Protokollen wie gPTP zu ermöglichen und die präzisen Ha
 
 - Die *Layer-2-API* ermöglicht den direkten Zugriff auf Ethernet-Frames, welche das Transportmittel für gPTP-Nachrichten darstellen. Dies ist zwingend erforderlich, da gPTP auf Layer 2 operiert und höhere Protokollschichten wie IP oder UDP umgangen werden müssen.
 
-- Die *Timestamping-Schnittstelle* bildet die softwareseitige Abstraktion für die im Kapitel `Hardware Grundlagen` erläuterten MAC-Timestamping-Fähigkeiten. Sie ist das entscheidende Bindeglied, das es der Protokoll-Implementierung ermöglicht, auf die für die gPTP-Algorithmen nötigen Zeitstempel (`t1` bis `t4`) präzise zuzugreifen.
+- Die *Timestamping-Schnittstelle* bildet die softwareseitige Abstraktion für die im Kapitel `Hardware Grundlagen` erläuterten MAC-Timestamping-Fähigkeiten. Sie ist das entscheidende Bindeglied, das es der Protokoll-Implementierung ermöglicht, auf die für die gPTP-Algorithmen nötigen Zeitstempel ($t_1$ bis $t_4$) präzise zuzugreifen.
 - Ergänzt wird dies durch *PTP-Clock-Treiber*, über welche die Hardware-Timer, die als Referenz für die lokale Zeit dienen, dem System zur Verfügung gestellt und von der gPTP-Logik synchronisiert werden können. Diese Treiber kapseln die spezifischen Registerzugriffe der Hardware.
 
 Der *Datenfluss* im Stack lässt sich am besten anhand des Weges eines Pakets nachvollziehen, wobei die oben genannten Komponenten zum Einsatz kommen. Der *Ingress-Pfad* (Empfang) beginnt, wenn ein Ethernet-Frame von der Hardware empfangen wird. Wie im Kapitel `Hardware Grundlagen` beschrieben, kann hier durch den MAC-Controller ein Hardware-Zeitstempel erfasst werden. Der Zephyr-*Ethernet-Treiber* nimmt diesen Frame samt Zeitstempel-Metadaten entgegen, verpackt ihn in einen `net_buf` und reiht ihn in eine zentrale Verarbeitungswarteschlange ein. An dieser Stelle im Software-Stack sind nun alle Informationen verfügbar, welche die gPTP-Protokolllogik zur Berechnung des `ingress timestamps (t2)` benötigt.

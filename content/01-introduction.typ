@@ -1,4 +1,6 @@
-#import "../meta.typ": note, fig-platzhalter-gross, fig-platzhalter-mittel, fig-platzhalter-klein, acr-emph, acrpl-emph, acr-cap
+#import "../meta.typ": (
+  acr-cap, acr-emph, acrpl-emph, fig-platzhalter-gross, fig-platzhalter-klein, fig-platzhalter-mittel, note,
+)
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Einleitung
