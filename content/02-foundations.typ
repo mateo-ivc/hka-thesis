@@ -30,15 +30,15 @@ Um die Notwendigkeit von gPTP besser zu verstehen, muss es gegeüber dem im Inte
     table.hline(),
     tab-h[Merkmal], tab-h[NTP], tab-h[PTPv2], tab-h[gPTP],
     table.hline(stroke: 0.5pt),
-    tab-d[Genauigkeit], tab-d[mikro bis Milliskeundenbereich], tab-d[sub Mikrosekunden], tab-d[sub Mikrosekunden],
+    tab-d[Genauigkeit], tab-d[$mu$s - ms], tab-d[< 1 $mu$s], tab-d[ < 1 $mu$s],
     tab-d[Laufzeitmessung], tab-d[E2E], tab-d[E2E/P2P], tab-d[P2P],
     tab-d[Komplexität],
     tab-d[Einfach],
-    tab-d[Sehr Komplex],
-    tab-d[eingeschränktes Profil und Konfigurationmöglichkeiten],
-    tab-d[Transportschicht], tab-d[], tab-d[], tab-d[],
-    tab-d[Hardwarebedarf], tab-d[-], tab-d[], tab-d[TSN fähige Hardware nötig],
-    tab-d[Einsatzgebiet], tab-d[], tab-d[], tab-d[],
+    tab-d[Hoch],
+    tab-d[Plug-and-Play],
+    tab-d[Transportschicht], tab-d[Layer 7], tab-d[Layer 2/Layer 3], tab-d[Layer 2],
+    tab-d[Hardwarebedarf], tab-d[-], tab-d[TSN Hardware], tab-d[TSN Hardware ],
+    tab-d[Ziel], tab-d[Generell], tab-d[Weiträumige Netzwerke], tab-d[lokale, Zeitkritische Systeme],
     table.hline(),
   ),
   caption: [Vergleich NTP, PTPv2 und gPTP],
@@ -47,9 +47,9 @@ Um die Notwendigkeit von gPTP besser zu verstehen, muss es gegeüber dem im Inte
 
 NTP stellt das Standardverfahren für die allgemaine Systemzeitsynchronistation im IT-Bereich dar. Es ist darauf ausgelegt, Netzwerklatenzen und Routenänderungen im Internet oder in Weitverkehrsnetzen statistisch auszugleichen, toleriert dabei jedoch Abweichungen im Milliskeundenbereich. Für Anwendungen in der industriellen Automotisierung oder im Automobilbereich sind jedoch Präzisionen im Nanosekundebreich erforderlich.
 
-Diese Genauigkeit wird durch das Precision Time Protocol (PTPv2) erreicht, welches vor allem durch Hardware-Timestamping die Paketlaufzeit sehr genau erfasst. PTPv2 wurde als flexibler Baukasten konzipiert und definiert über 100 Konfigurationsoptionen und Profile für verschiedene Industrien. Diese Flexibilität führt in der Praxis jedoch häufig yu Interoperabilitätsproblemen zwischen Geräten unterschiedlicher Hersteller.
+Diese Genauigkeit wird durch das Precision Time Protocol (PTPv2) erreicht, welches vor allem durch Hardware-Timestamping die Paketlaufzeit sehr genau erfasst. PTPv2 wurde als flexibler Baukasten konzipiert und definiert über 100 Konfigurationsoptionen und Profile für verschiedene Industrien. Diese Flexibilität führt in der Praxis jedoch häufig zu Interoperabilitätsproblemen zwischen Geräten unterschiedlicher Hersteller.
 
-Das Protokoll gPTP löst dieses Problem, indem es ein fest definiertes, stark eingeschränktes Profil von PTPv2 vorschreibt. Es eliminiert optionale Parameter und erzwingt standardmäßig die P2P-Laufzeitmessung, feste Nachrichtenraten und eine automatisierte Best Master Clock Algorithm (BMCA) Konfiguration. Dadruch wird ein Plug-and-Play Verhalten für lokale, zeitkritische Ethernet-Netzwerke realisiert.
+Das Protokoll gPTP löst dieses Problem, indem es ein fest definiertes, stark eingeschränktes Profil von PTPv2 vorschreibt. Es eliminiert optionale Parameter und erzwingt standardmäßig die P2P-Laufzeitmessung und eine feste Nachrichtenraten. Dadruch wird ein Plug-and-Play Verhalten für lokale, zeitkritische Ethernet-Netzwerke realisiert.
 
 === Rollen und Netzwerktopologie
 Eine gPTP-Domäne definiert eine logische Gruppierung von Geräten, die über das Netzwerk miteinander kommunizieren und auf eine gemeinsame Zeitbasis synchronisiert werden. Innerhalb dieser Topologie übernimmt jedes Gerät eine spzifische Rolle ein. Die Netzwerkschnittstellen (Ports) eines Gerätes können dabei in verschieden Zustände versetzt wereden.
@@ -82,7 +82,7 @@ Bei dem im @sync-mechanism (linke Seite) dargestellten Two-Step-Verfahren erfolg
 
 2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt (preciseOriginTimestamp), das correctionField sowie die rateRatio.
 
-Dieser kann auch in einem Schritt erfolgen. Dabei werden wie in der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen im Sync-Paket übermittelt. Dies
+Dieser kann auch in einem Schritt erfolgen. Dabei werden wie in der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen im Sync-Paket übermittelt.
 
 
 === Messung der Leitungsverzögerung
@@ -124,17 +124,18 @@ Damit die Bridge eine eingehende Sync-Nachricht korrekt an ihre Master-Ports wei
 3. *Aktualisierung der `rateRatio`:* Die Bridge verknüpft die im Follow_Up empfangene `rateRatio` mit der über den in Abbildung 2.2 beschriebenen pDelay-Mechanismus lokal gemessenen `neighborRateRatio` (dem Frequenzverhältnis zur Master Clock): $ "rateRatio"_("neu") = "rateRatio"_("alt") dot "neighborRateRatio" $
   Dadurch bleibt die `rateRatio` über beliebig viele Hops hinweg gültig und beschreibt stets das Frequenzverhältnis zwischen der Grandmaster Clock und der lokalen Clock der Bridge.
 
-4. *Frequenzanpassung (Syntonisierung):* Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet die Bridge die rateRatio. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.
-
-
+4. *Aktualisierung des `correctionField`:* Zum eingehenden `correctionField` addiert die Bridge sowohl die gemessene Leitungsverzögerung $D$ (skaliert mit der eingehenden `rateRatio`) als auch die zuvor ermittelte `residence time` (skaliert mit der soeben aktualisierten `rateRatio`):
+$
+  "correctionField"_("neu") = "correctionField"_("alt") + D dot "rateRatio"_("alt") + (t_s - t_r) dot "rateRatio"_("neu")
+$
+Der `preciseOriginTimestamp` bleibt dabei unverändert, da er stets die ursprüngliche Sendezeit der Grandmaster Clock referenziert; das `correctionField` trägt hingegen die seit dem Grandmaster akkumulierte Korrektur aus Laufzeit und Verarbeitungszeit.
 == Hardware Grundlagen
+Die in den vorangegangenen Abschnitten beschriebenen Synchronisations- und Messmechanismen setzen voraus, dass die beteiligten Zeitstempel mit einer dem geforderten Sub-Mikrosekundenbereich entsprechenden Genauigkeit erfasst werden. Dieses Kapitel beleuchtet die dafür notwendigen Hardware-Grundlagen. Im Folgenden wird zunächst erläutert, warum eine rein softwareseitige Zeitstempelung für gPTP ungeeignet ist und stattdessen spezialisierte Netzwerk-Hardware benötigt wird. Anschließend wird die Unterscheidung zwischen PHY- und MAC-Timestamping als zwei mögliche Realisierungsvarianten dieser Hardware-Zeitstempelung im Detail betrachtet.
 === Hardware-Timestamping
-Wie in @comparison-ptp-gptp dargestellt, erfordert gPTP eine Genauigkeit im Sub-Mikrosekundenbereich. Diese Anforderung hat direkte Konsequenzen für die Art und Weise, wie die Zeitstempel erfasst werden müssen.
-
+Wie in @comparison-ptp-gptp dargestellt, erfordert gPTP eine Genauigkeit im Sub-Mikrosekundenbereich. Diese Anforderung hat direkte Konsequenzen für die Art und Weise, wie die Zeitstempel erfasst werden müssen.\
 Eine naheliegende Möglichkeit wäre, den Zeitstempel rein in Software zu erfassen, etwa in dem Moment, in dem die Applikation oder der Netzwerktreiber ein empfangenes Paket verarbeitet. Ein solcher Zeitstempel unterliegt jedoch mehreren nicht-deterministischen Verzögerungsquellen.
-//todo: welche quellen?
-Diese Verzögerungen summieren sich auf, das Abweichungen im Bereich mehrerer zehn bis hundert Mikrosekunden enstehen und damit zu einem Vielfachen der von gPTP geforderten Genauigkeit abweicht. Reines Software-Timestamping ist damit für gPTP ungeeignet.
-
+//todo: welche quellen? -> Interrupt Latenz, OS-Scheduling, Netzwerk-Stack, ...
+Diese Verzögerungen summieren sich auf, das Abweichungen im Bereich mehrerer zehn bis hundert Mikrosekunden enstehen und damit zu einem Vielfachen der von gPTP geforderten Genauigkeit abweicht. Reines Software-Timestamping ist damit für gPTP ungeeignet.\
 Aus diesem Grund wird für gPTP-fähige Systeme dedizierte Netzwerk-Hardware benötigt, die in der Lage ist, Zeitstempel autonom zu erfassen: Die Erfassung erfolgt direkt durch eine Logikeinheit in der Netzwerk-Hardware selbst, ausgelöst durch das tatsächliche Auftreten des Signals, und ist damit unabhängig von der aktuellen Auslastung der CPU oder des Betriebssystems. Diese Fähigkeit ist nicht bei jeder Ethernet-Hardware gegeben, sondern setzt entsprechend ausgestattete MAC-Controller bzw. PHY-Bausteine voraus.
 
 === PHY vs. MAC Timestamping
@@ -175,7 +176,6 @@ Der *Datenfluss* im Stack lässt sich am besten anhand des Weges eines Pakets na
 Beim *Egress-Pfad* (Senden) erstellt die Applikationslogik einen `net_buf`, der die zu sendende Nachricht enthält. Dieser wird über die Layer-2-API an den Treiber übergeben. Nachdem der Treiber das Paket physisch versendet und der MAC den exakten Sendezeitpunkt als `egress timestamp (t1)` erfasst hat, wird diese Zeitinformation über einen Callback-Mechanismus (`tx_tstamp`) der Timestamping-Schnittstelle an die Applikation zurückgemeldet. Dieser Mechanismus ist die softwareseitige Realisierung der Anforderung aus dem gPTP-Standard, den exakten Sendezeitpunkt für die Erstellung der `Follow_Up`-Nachricht zu kennen.
 
 TODO: Stack als modulare, schichtbasierte architektur darstellen
-
 
 
 

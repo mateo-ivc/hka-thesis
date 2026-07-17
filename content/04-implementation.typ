@@ -1,30 +1,18 @@
-#import "../meta.typ": note, fig-platzhalter-mittel, asm-listing, c-listing, acr-emph
+#import "../meta.typ": acr-emph, asm-listing, c-listing, fig-platzhalter-mittel, note
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Implementierung
 
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat.
+== Umsetzung der Timer Synchronisierung
+Timer werden über einen eigenen Task Synchronisiert.\
+Zwei Interrupts:
+- wenn pps signal gesendet wird -> Hardware Timestamp speichern.
+- wenn das pps signal wieder eingelesen wird. -> Hardware timestamp speichern
 
-== Beispiel C-Listing
-
-Das C-Listing mit Syntaxhervorhebung und Zeilennummern:
-
-#figure(
-  c-listing(
-    "1\n2\n3",
-    "int add(int a, int b) {\n  return a + b;\n}",
-  ),
-  caption: [Beispielhaftes C-Listing],
-) <lst:c-beispiel>
-
-== Beispiel Assembler-Listing
-
-#figure(
-  asm-listing(
-    "1\n2",
-    "push {r0, lr}\npop  {r0, pc}",
-  ),
-  caption: [Beispielhaftes ARM-Assembler-Listing],
-) <lst:asm-beispiel>
-
-At vero eos et accusam et justo duo dolores et ea rebum, vgl. @lst:c-beispiel und @lst:asm-beispiel.
+Dadurch lässt sich die rateRatio berechnen (offset in beiden Timestamps) und durch einen einfachen PI-Regler Synchronisieren.
+== Probleme im gPTP-Subsystem
+Bugs hier auflisten und zeigen wie sie behoben wurden
+== Boardspezifische Konfigurationen
+- PTP-Clock musste richtig konfiguriert werden
+- PTP-Timer können nicht dynamisch (devicetree) gesetzt werden
+- Interrupts mussten richtig konfiguriert werden
