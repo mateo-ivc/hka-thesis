@@ -12,10 +12,12 @@ Folgende Anforderungen muss die Implementierung erfüllen.
 - pDelay < 800ns (nochmal im Standard nachschauen)
 - E2E Synchronization -> < 1$mu$s (gilt kumulativ)
 
+Zeitmessung der LocalClock  < 40ns
 
 Hardware Anforderungen:
 - Leistungskriterien -> max offset und Jitter (Clock)
 - Hardware Timestamping
+- mindestens 2 Ports
 
 
 == Testaufbau
@@ -49,7 +51,7 @@ Es werden 2 free running Clocks verwendet. D.h. beide Ports haben eine unterschi
 Da im gPTP-Stack nur der Timer vom Slave Port Synchronisiert wird, kann der Master Port die nachfolgende Systeme nicht Synchronisieren. \
 Daher muss eine eigene Lösug her, die den zweiten Timer zum ersten Synchronisiert.
 
-Implementierung in 4.
+Implementierung in Kapitel 4.
 
 
 == Messmethodik

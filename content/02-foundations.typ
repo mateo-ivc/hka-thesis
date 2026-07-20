@@ -36,7 +36,7 @@ Um die Notwendigkeit von gPTP besser zu verstehen, muss es gegeüber dem im Inte
     tab-d[Einfach],
     tab-d[Hoch],
     tab-d[Plug-and-Play],
-    tab-d[Transportschicht], tab-d[Layer 7], tab-d[Layer 2/Layer 3], tab-d[Layer 2],
+    tab-d[Transportschicht], tab-d[Layer 7], tab-d[Layer 2/Layer 3&4], tab-d[Layer 2],
     tab-d[Hardwarebedarf], tab-d[-], tab-d[TSN Hardware], tab-d[TSN Hardware ],
     tab-d[Ziel], tab-d[Generell], tab-d[Weiträumige Netzwerke], tab-d[lokale, Zeitkritische Systeme],
     table.hline(),

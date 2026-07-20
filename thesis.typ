@@ -204,8 +204,9 @@
 #include "content/02-foundations.typ"
 #include "content/03-analysis-and-design.typ"
 #include "content/04-implementation.typ"
-#include "content/05-Evaluation.typ"
-#include "content/06-conclusion-and-outlook.typ"
+#include "content/05-Tests.typ"
+#include "content/06-Evaluation.typ"
+#include "content/07-conclusion-and-outlook.typ"
 
 #openright()
 // In the bibliography the entries are neither body-text paragraphs (with a
