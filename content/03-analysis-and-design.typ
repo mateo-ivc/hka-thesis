@@ -93,24 +93,19 @@ Liegt die berechnete Standardabweichung $sigma$ innerhalb der geforderten 0,1ppm
 
 
 == Messmethodik
-Wie überprüft man die Synchronisierung?
-Z.b. über Hardware Trigger am Mikrocontroller, die das PPS Signal der Master und Slave Clock auf ein GPIO Pin legen.
+Um die tatsächlich errichte Synchronisierungsegenauigkeit des Testaufbaus zu überprüfen reicht eine rein software-setige Betrachtung der berechneten Offsets nicht aus, da diese bereits durch den Synchronisierungsalgorithmus korrigiert werden. Stattdessen wird die Synchronisierung über einen unabhängigen Hardware-Trigger am jeweiligen Mikrokontroller nachgewiese: Sowohl die Master- als auch die Slave-Clock legen ein PPS-Signal (Pulse-Per-Second) auf einen GPIO-Pin, welches direkt aus dem internen Timer der jeweiligen Clock abgeleitet wird und damit unabhängig von gPTP-Stack ist. Die zeitliche Differenz zwischen den beiden PPS-Flanken entspricht dem tatsächlichen Offset zwischen Master und Slave und lässt sich extern messen.
 
-Ingress/Egress Timestamps
+Für die Erfassung der PPS-Signale wird ein Oszilloskop verwendet: Die PPS-Flanken von Master und Slave werden gleichzeitig aufgenommen und als Rohdaten exportiert. Ein Auswertungsskript berechnet anschließend die zeitliche Differenz zwischen den Signalen und bestimmt daraus den PPS-Offset über die gesamte Messdauer.
 
-Wie werden die Daten analysiert?
-Oszi aufnahmen -> Rohdaten werden aufgenommen, in ein Skript geworfen und können anschließend analysiert werden.
+Konkret werden folgendet Daten für die spätere Auswertung geloggt:
+- Residence Time
+- pDelay -> timestamps der einzelnen Nachrichten ($t_1$ bis $t_4$)
+- PPS-Offset
+- rateRatio
+-
 
-Welche Daten werden analysiert?
-- Residence Timer -> logs
-- pDelay -> logs
-- PPS Offset -> logs
 
-Wie kann man das Statistisch analysieren
-
-Was kann man daraus erkennen?
-- Jitter und Wander-Offset
-- ob die Anfoderungen erfüllt werden
+Die statistische Auswertung...
 
 == Ungenauigkeiten
 //https://www.irit.fr/~Katia.Jaffres/Fichiers/2021ETR.pdf
