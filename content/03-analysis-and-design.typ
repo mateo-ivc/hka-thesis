@@ -46,42 +46,50 @@ Neben den normativen Zeitanforderungen ergeben sich aus dem gewählten Testaufba
 
 
 == Testaufbau
-- Konkrete Hardware (3× NXP RT1176 als Bridges, 2× STM32H7)
-- Topologie: Verkettung der Mikrokontrolelr -> Kleines Diagramm zeigen
-- freerunning Grandmaster clock -> Wieso freerunning,
-- In welcher frequenz werden Sync und pDelay Nachirchten gesendet?
-- Wieso kein BMCA -> Um maximale anzahl an Hops zu gewährleisten.
-chronisierung (keine Syntonisierung)
+Für den Nachfolgenden Testaufbau werden drei Phyboard Atlas als Bridge verwendet. Diese verfügen jeweils über zwei Ports, wovon einer von einem 1Gbit/s PHY mit SFD-Erkennung gesteuert wird und der andere von einem 100/10Mbit/s PHY ohne SFD-Erkennung.
+//(Muss ich hier erklären, wieso diese Hardware verwendet wird?)
 
+Des weiteren sollen zwei STM32H7 verwendet werden, um zum einem als Grandmaster Clock und zum anderen als Endpoint. Dadurch lässt sich ein Testaufbau mit maximal 4 Hops gestalten. Dies erzwingt allerdings das abschalten des BMCA um den einzelnen System ihre feste Rolle zu geben.
 
-== MAC Timestamping
+Da in dieser Arbeit nur die Bridgefunktion validiert werden soll, ist es nicht nötig die Grandmaster Clock zu einer externen Zeitquelle zu synchronisieren. Daher wird diese Clock im freerunning-mode betrieben.
+
+pDelay und Sync-Nachrichten werden nach den Standard werten auf jeweils 1Hz für pDelay und 8Hz für Sync gesendet.
+
+== Timestamping
 //https://www.ti.com/lit/wp/snla465/snla465.pdf?ts=1784483809731
-Kernfrage beantwortet: Wieso MAC Timestamping verwendet wird.
-- MAC-Timestamping funktioniert out of the box
-PHY Timestamping ist komplexer zu konfigurieren
-- MAC Timestamping hat vorerst keine nennenswerten Nachteile -> ingress/egress Latency ist gering genug. Und kann softwareseitig rausgerechnet werden.
+//https://www.ti.com/lit/ds/symlink/dp83867e.pdf?ts=1784535520366&ref_url=https%253A%252F%252Fwww.ti.com%252Fproduct%252FDP83867E
+// https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/DataSheets/KSZ8081RNA-RND-10BASE-T-100-BASE-TX-PHY-with-RMII-Support-DS00002199F.pdf
 
-== Warum zwei Timer ?
-Problem mit der aktuellen Hardware:
-Es werden 2 free running Clocks verwendet. D.h. beide Ports haben eine unterschiedliche Zeitbasis.
-
-Da im gPTP-Stack nur der Timer vom Slave Port Synchronisiert wird, kann der Master Port die nachfolgende Systeme nicht Synchronisieren. \
-Daher muss eine eigene Lösug her, die den zweiten Timer zum ersten Synchronisiert.
-
-*Wichtig:* Annex B.2.4
-1. Zeistemepelauflösung = 25MHz (40ns)
-2. PI Regler um Messrauschen der Timestamps auszugleichen
-
-0,1ppm nachweisen:
-1. Enschwingzeit abwarten
-2. rateRatio loggen
-3. Abweichung prüfen -> Standardabweichung berechnen
-  - Mittelwert berechnen
-  - Wahrscheinlichkeit einzelner Werte berechnen
-  - Werte in Formel einsetzen $sigma = sqrt("VAR") = sqrt((sum_(i=1)^n) (x_i - mu)^2 dot p_i)$
+Wie bereits im Grundlagen Kaptiel besprochen, kann man Timestamps direkt über die Hardware, als auch einen Layer später über den MAC erfassen. \
+Für diesen Versuch ist die verwendung von der MAC-Timestamping erzwingend, da beide PHYs der Bridge nicht über die Fähigkeit des direkten PHY Timestamping verfügen.\
+Desweiteren besitzt der 1Gbit/s PHY über eine SFD erkennung, was bedeutet, dass der PHY einen SFD-Pulse an den MAC sendet, wenn immer ein Start-Of-Frame-Delimiter erkannt wird. Bei dem 10/100Mbit/s PHY ist dies leider nicht der Fall, weshalb es bei Messungen zu ungenaueren Timestamp oder erhöhtem Jitter kommen kann.
 
 
-Implementierung in Kapitel 4.
+
+== Interne Bridge Synchronisierung
+
+Ein Problem gibt es mit der aktuellen Hardware. Da die Hardware über einen eigenen MAC für jede Ethernet Schnittstelle verfügt, ist die relative Zeit von MAC zu MAC immer Unterschiedlich.
+Im gPTP Stack wird allerdings immmer nur der Timer zum zugehörigen Port Synchronisiert. Dies führt dazu, dass der Master Port auf der Bridge nicht Synchronisiert ist und dadruch die Nachfolgenden Systeme nicht korrekt Synchronisieren kann.
+
+Um dieses Problem zu lösen, wird ein extra Task in ZephyrRTOS erstellt, der sich um das Synchronisieren des Master-Ports zum Slave-Port auf der Bridge kümmert.
+
+Damit eine korrekte Synchronisierung gewährleistet werden kann müssen allerdings einige Anforderungen erfüllt werden, die in Annex B des Standards beschrieben werden.:
+
+1. Für korrekte und genaue Messungen der Zeitstempel braucht es eine Auflösung von Mindestens $25"MHz"$. Das bedeutet, zwischen jedem Tick den der Timer macht, dürfen maxmimal $40"ns"$ vergehen.
+
+2. Zeitstempel durch Messrauschen verfälscht werden können, darf die Rate-Korrektur zwischen Master und Slave nicht direkt aus einzelnen Timestamp-Differenzen abgeleitet werden, da dies zu einer Instabilen Regelung führen würde. Um dies zu verhindern, wird ein PI-Regler eingesetzt, der die Messewerte über meherere Sync-Intervalle glättet und daraus ein robustes rateRatio berechnet.
+
+Neben diesen beiden Anforderungen fordert Annex B.2.4 außerderm den Nachweis, dass die interne Synchronisierung zwischen Master und Slave eine Genauigkeit von 0,1ppm erreicht. Um dies nachzuweisen, wir wiefolgt vorgegangen:
+
+1. Einschwingzeit abwarten, damit sich der PI-Regelr auf einen stabilen Zustand einschwingen kann.
+
+2. rateRatio zwischen Master und Slave über einen definierten Zeitraums messen und loggen.
+
+3. Aus den Messungen wird die Abweichung von der geforderten Genauigkeit geprüft, indem die Standardabweichung des Messreihe berechnet wird. Dazu wird zunächst der Mittelwert $mu$ des Messreihe bestimmt, anschließend die Wahrscheinlichkeit $p_i$ der einzelnen Werte, und die Ergebnisse abschließend in folgende Formel eingesetzt:
+
+  $sigma = sqrt("VAR") = sqrt((sum_(i=1)^n) (x_i - mu)^2 dot p_i)$
+
+Liegt die berechnete Standardabweichung $sigma$ innerhalb der geforderten 0,1ppm, gilt die Anforderung an die interne Synchronisierung als erfüllt.
 
 
 == Messmethodik

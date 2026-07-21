@@ -138,6 +138,8 @@ Eine naheliegende Möglichkeit wäre, den Zeitstempel rein in Software zu erfass
 Diese Verzögerungen summieren sich auf, das Abweichungen im Bereich mehrerer zehn bis hundert Mikrosekunden enstehen und damit zu einem Vielfachen der von gPTP geforderten Genauigkeit abweicht. Reines Software-Timestamping ist damit für gPTP ungeeignet.\
 Aus diesem Grund wird für gPTP-fähige Systeme dedizierte Netzwerk-Hardware benötigt, die in der Lage ist, Zeitstempel autonom zu erfassen: Die Erfassung erfolgt direkt durch eine Logikeinheit in der Netzwerk-Hardware selbst, ausgelöst durch das tatsächliche Auftreten des Signals, und ist damit unabhängig von der aktuellen Auslastung der CPU oder des Betriebssystems. Diese Fähigkeit ist nicht bei jeder Ethernet-Hardware gegeben, sondern setzt entsprechend ausgestattete MAC-Controller bzw. PHY-Bausteine voraus.
 
+*TODO:* SFD-Erkennung erklären
+
 === PHY vs. MAC Timestamping
 Für die im vorherigen Abschnitt beschriebenen Mechanismen — insbesondere die Messung der Leitungsverzögerung sowie der `residence time` — ist die Genauigkeit der Zeitstempel $t_1$ bis $t_4$ bzw. $t_r$ und $t_s$ entscheidend. Ein Hardware-Zeitstempel wird dabei erfasst, sobald ein definiertes Referenzsignal ( der Start Frame Delimiter, SFD) einer Ethernet-Nachricht erkannt wird. Je nachdem, an welcher Stelle im Signalpfad dieser Zeitpunkt erfasst wird, unterscheidet der Standard zwei Verfahren:
 
