@@ -3,16 +3,20 @@
 
 = Implementierung
 
-Im folgenden Kaptiel wir vorgestellt, welche Anpassungen am Zephyr Code gemacht wurden, damit das Protokoll zuverlässig Funktioniert. Dafür wird erst auf die Board spezifischen änderungen eingegangen und anschließend auf die Änderungen im gPTP-Subsystem. Zuletzt wird die interne Board Synchrnisierung beschrieben.
+Im folgenden Kapitel werden die Anpassungen vorgestellt, damit das gPTP-Protokoll zuverlässig funktioniert. Dazu wird zunächst auf die Board-spezifischen Änderungen eingegangen, anschließend auf die Anpassungen im gPTP-Subsystem selbst. Abschließend wird die interne Synchronisierung der beiden Bridge-Ports beschrieben.
 
 == Anpassungen in Zephyr
-Das gPTP-Protkoll soll vor allem mit Zephyr ein Plug-and-Play System bilden. Eine Software die auf verschiedenen Systemen einwand frei Funktioniert. Dennoch musst im laufe der Arbeit einige änderungen vorgenommen werden, damit das System ohne Probleme Funktioniert. Daher befasshen sich die nächsten zwei unterkaptiel mit den Änderungen im Zephyr Workspace.
+Zephyrs gPTP-Implementierung ist grundsätzlich für Endgeräte mit einer einzigen Ethernet-Schnittstelle ausgelegt und soll dort einwandfrei funktioniere, ohne dass Anwender Anspassungen vornehmen müssen. Der in dieser Arbeit verwendete Testaufbau erfordert jedoch eine Bridge mit zwei unabhängigen ENET-Instanzen - eine Konfiguration, die der Stack zwar implementiert, allerdings nie auf ihre Funktionalität validiert hat. Zudem sind im Laufe der Arbeit Fehler aufgetaucht, welche Anpassungen an board-spezifischen Treiber als auch an dem gPTP-Subsystem selbst erfordern. Die folgenden beiden Unterkaptiel beschreiben diese Änderungen.
 
 === Board Spezifische Änderungen
-*imxrt11xx/soc.c:* Initialisierung der Clocks wurden angepasst:
-Es wurde vorerst nur eine ENET Instance mit einem Timer initialisiert. Des weiteren wurde die Frequenz angepasst -> SYS_PLL1_DIV2 / 20 = 25MHz für beide PTP Timer. Erfüllt somit die anforderung in 3.4
+//todo: Überschriften umbennenen
+*imxrt11xx/soc.c:*\
+Die Initialisierung der PTP-Timer-Taktgeber wurde angepasst. Der unrsprüngliche Zephyr-Code konfiguriert nur einen Taktgeber für eine einzelne ENET-Instanz. Für die Bridge wurde allerdings ein zweiter, identische konfigurierter Taktgeber für die zweite ENET-Instanz ergänzt. Beide Taktgeber werden aus `SYS_PLL1_DIV2` (geteilt durch 20) abgeleitet, was einer PTP-Timer-Frequenz von $25"MHz"$ entspricht, und erfüllt somit die in Abschnitt 3.4 geforderte Mindestauflösung.
 
-*clock_control/clock_control_mcux_ccm_rev2.c:* Hard mapping der Timer zu den ENET Instanzen, damit jede Instanz den Korrekten timer zugeordnet bekommt.
+//hier noch schreiben wieso für beide timer nicht ein CLK_ROOT verwendet werden kann: Grund ist das die Hardware verschaltung es nicht zulässt. Siehe S.1426 im Handbuch.
+
+*clock_control/clock_control_mcux_ccm_rev2.c:*
+Die Funktion, über die Zephyr die Taktrate eine Peripherie abfragt (`mcux_ccm_get_subsys_rate()`), gab für beide ENET-Instanzen bisher die Taktrate einer Instanz zurück. Dan nun aber zwei unabhängig Taktgeber für die PTP-Timer existierenm wurde eine instanzabhängige Zuordnung ergänzt, sodass jede ENET-Instanz die Taktrate ihres eigenen PTP-Timers zurückerhält.
 
 *ptp_clock/ptp_clock_nxp_enet.c:* Die capture und compare funktion der timer wurde richtig gesetzt. Zudem wurde in den Callback die Funktion hinzugefügt, timestamp an einen Task zusenden, wenn ein bei einem Timer das Capture/Compare Event ausgelöst hat.
 Benötigt ist dies, um anschließend beide Timer zu Synchronisieren.
