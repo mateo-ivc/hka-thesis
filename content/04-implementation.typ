@@ -3,25 +3,14 @@
 
 = Implementierung
 
-Im folgenden Kaptiel wir vorgestellt, wie die zuvor beschriebenen Probleme behoben wurden, als auch wie die Analyse Skripte implementiert wurden, welche für die nachfolgende Evaluation verwendet wurden.
+Im folgenden Kaptiel wir vorgestellt, welche Anpassungen am Zephyr Code gemacht wurden, damit das Protokoll zuverlässig Funktioniert. Dafür wird erst auf die Board spezifischen änderungen eingegangen und anschließend auf die Änderungen im gPTP-Subsystem. Zuletzt wird die interne Board Synchrnisierung beschrieben.
 
-== Implementierung der Bridge Synchronisierung
-"Umsetzung der Timer Synchronisierung"
+== Anpassungen in Zephyr
+Das gPTP-Protkoll soll vor allem mit Zephyr ein Plug-and-Play System bilden. Eine Software die auf verschiedenen Systemen einwand frei Funktioniert. Dennoch musst im laufe der Arbeit einige änderungen vorgenommen werden, damit das System ohne Probleme Funktioniert. Daher befasshen sich die nächsten zwei unterkaptiel mit den Änderungen im Zephyr Workspace.
 
-Konzept steht (2 Interrupts, Offset → rateRatio, PI-Regler) — noch fehlt:
-Regelkreis-Frequenz (wie oft wird synchronisiert?)
-PI-Parameter (Kp/Ki) und wie sie bestimmt wurden
-Rückbezug zur Anforderung residenceTimer < 10 aus Kap. 3 — wie wirkt sich die Genauigkeit dieser internen Sync auf die residence time aus?
-Ablaufdiagramm wäre hier sehr hilfreich (2 Interrupts + interne PPS-Erzeugung ist ohne Grafik schwer nachvollziehbar)
-
-
-Dadurch lässt sich die rateRatio berechnen (offset in beiden Timestamps) und durch einen einfachen PI-Regler Synchronisieren.
-== Probleme im gPTP-Subsystem
-Bugs hier auflisten und zeigen wie sie behoben wurden
-
-=== Board specific changes
+=== Board Spezifische Änderungen
 *imxrt11xx/soc.c:* Initialisierung der Clocks wurden angepasst:
-Es wurde vorerst nur eine ENET Instance mit einem Timer initialisiert. Des weiteren wurde die Frequenz angepasst -> SYS_PLL1_DIV2 / 20 = 25MHz für beide PTP Timer
+Es wurde vorerst nur eine ENET Instance mit einem Timer initialisiert. Des weiteren wurde die Frequenz angepasst -> SYS_PLL1_DIV2 / 20 = 25MHz für beide PTP Timer. Erfüllt somit die anforderung in 3.4
 
 *clock_control/clock_control_mcux_ccm_rev2.c:* Hard mapping der Timer zu den ENET Instanzen, damit jede Instanz den Korrekten timer zugeordnet bekommt.
 
@@ -31,7 +20,7 @@ Benötigt ist dies, um anschließend beide Timer zu Synchronisieren.
 *ethernet/eth_stm32_hal_common.c:*
 Funktion hizugefüht, die bei einem Capture auf dem STM32H7 ebenfalls die aktuell timestamp zu einem Task schickt.
 
-=== gPTP Changes
+=== Änderungen im gPTP-Subsystem
 *gptp_message.c*
 
 Davor: Wenn der Callback für den TX-Zeitstempel eines Sync-Pakets nie ausgelöst wurde, oder erneut aufgeruft wurde, bevor der vorherige Callback ausgeführt wurde, blieb sznc_cb_registered[port] für immer auf true und es konnte kein neuer Callback für die nächste Sync Nachricht gesetzt werden. -> TX Timestamps sind hängen geblieben.
@@ -40,12 +29,46 @@ Hinzufgeügt wurde ein Check der überprüft, ob  der registrierte Callback auf 
 
 *gptp_md.c:* Sync-send state machine getting Stuck.
 
-Davor: Falls der TX timestampf für die Sync Nachricht (md_sync_timestamp_avail) nicht vorhanden ist, bleibt die StateMachine im State Sync_SEND_SEND_FUP stecken. Dieses Problem wurde nirgends recovered und führt dazu, dass die Synchronisierung aussetzt.
+Davor: Falls der TX timestamp für die Sync Nachricht (md_sync_timestamp_avail) nicht vorhanden ist, bleibt die StateMachine im State Sync_SEND_SEND_FUP stecken. Dieses Problem wurde nirgends recovered und führt dazu, dass die Synchronisierung aussetzt.\
+Um das Problem zu lösen wird man im GPTP_SYNC_SEND_SEND_FUP State, wenn ein festhängen erkannt wird, wieder zurück in den GPTP_SYNC_SEND_SEND_SYNC gesetzt. Dieser Ansatz startet sogesehen die GPTP_SYNC_SEND Statemachine neu und erzwingt somit das erneute Senden eines Sync-Frames.
 
 *gptp_md.c:* Conversion bug - rate rateRatio
 
 cumulative_scaled_rate_offset ist vom typ int32 also signed. allerdigs gibt die methode net_ntohl() einen uint32_t zurück, welche anschließend direkt in ein double convertiert wird.
+Die führt dazu, dass negative Offsets als eine hohe positive Zahl interpretiert werden. Dies betrifft allerdings nur Bridgesysteme. \
+Damit die Bridge weiterhin Sinnvolle Daten weiterleitet, muss die unsigned int32 direkt wieder in einen int32 gecastet werden.
+
+== Implementierung der Bridge Synchronisation
+Die folgende Implemnetierung ist keine im 802.1AS vorgesehene Implementierung. Trotzdem ist diese auf Grund dem in 3.4 gennanten Problem erforlderlich.
+Zur Lösung des Problems wurde ein extra Task für die Synchronisierung der Timer angelegt.
+
+Die Synchronisierung funktioniert dabei wiefolgt.
+
+Die Slave Instanz hat eine für den Timer eine compare event konfiguriert. Das bedeute, dass der timer die aktuelle Zeit mit einem gegebenen Wert vergleicht und anschließend ein Puls Signal über ein GPIO Pin versendet. Dieses Signal ist auch als PPS bekannt.
+
+Die Master Instanz hingegen hat bei dem Timer ein Capture Event konfiguriert. Hier wird das gesendete Signal vom Slave eingelesen.
+
+Da beiden Events jeweils ein Interrupt werfen, wird zu genau diesem Zeitpunkt die aktuelle Zeit des Timers entnommen.
+Die Timestamps werden in der ISR erfasst, da Sie hier am genausten sind. Das wird dadruch gewährleistet, da hier  Anschließend werden sie über eine Queue an die Synchronisierungs Task übergeben. Der Vorteil dabei ist, dass man die ISR so kurz wie möglich hält und somit den jitter so gering wie möglich und das deterministische verhalten so hoch wie möglich hält.
+
+Der Task kümmert sich anschließend darum, dass die Master Instanz sich an die Slave Instanz Synchronisiert.
+
+Der Mechanismus selbst berechnet aus den 2 Timestamps einen einfachen Phaseerror. Sollte dieser fehler größer als 500ms sein, wird die Clock hart auf die Zeit des Masters gesetzt. Dies Optimiert die Synchronisationzeit, da die zu Synchrnisierende Clock hier direkt näher an die Ziel Zeit gebracht wird. Vorallem wenn ein Grät in frisch in ein bereits bestehendes System integriert wird, kommt dies von großem Vorteil.
+
+Im anderen Fall wird mittels dem Phaseerror und einem PI-Regler die ratio mit dem der Timer zählt angepasst. Durch den PI-Regler zählt der eigne Timer mit eine frequenz, die sich langsam aber sicher der Frequenz mit dem der Master zählt annähert.
+
+/* todo: mehr inhalt mitrein bringen:
 
 
 
+aktuell ist noch ein fester korrektur wert von 120ns drin. -> Durch messungen konnte ein 120ns offset erkannt werden.
+
+*/
+#figure(
+  c-listing(
+    "1\n2\n3",
+    "int add(int a, int b) {\n  return a + b;\n}",
+  ),
+  caption: [Beispielhaftes C-Listing],
+) <lst:c-beispiel>
 

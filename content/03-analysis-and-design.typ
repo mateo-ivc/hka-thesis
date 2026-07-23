@@ -107,10 +107,10 @@ Konkret werden folgendet Daten für die spätere Auswertung geloggt:
 
 Die statistische Auswertung...
 
-== Ungenauigkeiten
-//https://www.irit.fr/~Katia.Jaffres/Fichiers/2021ETR.pdf
-Wo können unginauigkeiten aufkommen bezüglich des timestampens, pDelay & residence Time berechnungen und dem Synchronisieren?
+// == Ungenauigkeiten
+// //https://www.irit.fr/~Katia.Jaffres/Fichiers/2021ETR.pdf
+// Wo können unginauigkeiten aufkommen bezüglich des timestampens, pDelay & residence Time berechnungen und dem Synchronisieren?
 
-- Z.B. mit STM32 hat man einen zu hohen pDelay
-- Clock Qualität (temparatur)
-- 100 MBit/s eth phy vs 1GBit/s eth phy
+// - Z.B. mit STM32 hat man einen zu hohen pDelay
+// - Clock Qualität (temparatur)
+// - 100 MBit/s eth phy vs 1GBit/s eth phy
