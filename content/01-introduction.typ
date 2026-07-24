@@ -19,7 +19,7 @@ Gleichzeitig gewinnen ressourcenbeschränkte Embedded-Systeme in diesen Anwendun
 
 == Problemstellung
 
-Um ZephyrRTOS effektiv in TSN-Netzwerken einzusetzen, muss das Synchronisieren nicht nur zwischen Endknoten funktionieren, sondern auch zuverlässig als Bridge, um die Zeitinformationen präzise weiterzuleiten.
+Um ZephyrRTOS effektiv in TSN-Netzwerken einzusetzen, muss die Synchronisierung nicht nur zwischen Endknoten funktionieren, sondern auch zuverlässig innerhalb von Bridges erfolgen, um die Zeitinformationen präzise weiterzuleiten.
 
 Aktuell existiert im Quellcode von Zephyr eine Implementierung des IEEE 802.1AS-Protokolls, welche auch das Bridging implementiert, allerdings wurde diese nie in der Praxis validiert.
 

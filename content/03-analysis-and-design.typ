@@ -42,7 +42,7 @@ Neben den normativen Zeitanforderungen ergeben sich aus dem gewählten Testaufba
 
 - Hardware-Timestamping: Zeitstempel für ein- und ausgehende gPTP-Nachrichten müssen auf MAC-Ebene erzeugt werden (Begründung folgt in Abschnitt "MAC Timestamping").
 - Mindestens zwei Ports: Jede Time-Aware Bridge muss Nachrichten an einem Port empfangen und über einen weiteren weiterleiten können.
-- Clock-Qualität: Offset und Jitter der Oszillatoren müssen die Einhaltung von NFR-3 über die gesamte Messdauer zulassen.
+- Clock-Qualität: Offset und Jitter der Oszillatoren müssen die Einhaltung von E2E-Synchronisationsgenauigkeit über die gesamte Messdauer zulassen.
 
 
 == Testaufbau
@@ -60,7 +60,7 @@ pDelay und Sync-Nachrichten werden nach den Standard werten auf jeweils 1Hz für
 //https://www.ti.com/lit/ds/symlink/dp83867e.pdf?ts=1784535520366&ref_url=https%253A%252F%252Fwww.ti.com%252Fproduct%252FDP83867E
 // https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/DataSheets/KSZ8081RNA-RND-10BASE-T-100-BASE-TX-PHY-with-RMII-Support-DS00002199F.pdf
 
-Wie bereits im Grundlagen Kaptiel besprochen, kann man Timestamps direkt über die Hardware, als auch einen Layer später über den MAC erfassen. \
+Wie bereits im Grundlagen Kapitel besprochen, kann man Timestamps direkt über die Hardware, als auch einen Layer später über den MAC erfassen. \
 Für diesen Versuch ist die verwendung von der MAC-Timestamping erzwingend, da beide PHYs der Bridge nicht über die Fähigkeit des direkten PHY Timestamping verfügen.\
 Desweiteren besitzt der 1Gbit/s PHY über eine SFD erkennung, was bedeutet, dass der PHY einen SFD-Pulse an den MAC sendet, wenn immer ein Start-Of-Frame-Delimiter erkannt wird. Bei dem 10/100Mbit/s PHY ist dies leider nicht der Fall, weshalb es bei Messungen zu ungenaueren Timestamp oder erhöhtem Jitter kommen kann.
 
@@ -79,7 +79,7 @@ Damit eine korrekte Synchronisierung gewährleistet werden kann müssen allerdin
 
 2. Zeitstempel durch Messrauschen verfälscht werden können, darf die Rate-Korrektur zwischen Master und Slave nicht direkt aus einzelnen Timestamp-Differenzen abgeleitet werden, da dies zu einer Instabilen Regelung führen würde. Um dies zu verhindern, wird ein PI-Regler eingesetzt, der die Messewerte über meherere Sync-Intervalle glättet und daraus ein robustes rateRatio berechnet.
 
-Neben diesen beiden Anforderungen fordert Annex B.2.4 außerderm den Nachweis, dass die interne Synchronisierung zwischen Master und Slave eine Genauigkeit von 0,1ppm erreicht. Um dies nachzuweisen, wir wiefolgt vorgegangen:
+Neben diesen beiden Anforderungen fordert Annex B.2.4 außerderm den Nachweis, dass die interne Synchronisierung zwischen Master und Slave eine Genauigkeit von 0,1ppm erreicht. Um dies nachzuweisen, wir wie folgt vorgegangen:
 
 1. Einschwingzeit abwarten, damit sich der PI-Regelr auf einen stabilen Zustand einschwingen kann.
 
@@ -104,8 +104,6 @@ Konkret werden folgendet Daten für die spätere Auswertung geloggt:
 - rateRatio
 -
 
-
-Die statistische Auswertung...
 
 // == Ungenauigkeiten
 // //https://www.irit.fr/~Katia.Jaffres/Fichiers/2021ETR.pdf

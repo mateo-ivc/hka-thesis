@@ -17,11 +17,11 @@ Standard-Ethernet wurde für den maximalen Durchsatz und Fehlertoleranz konzipie
 Time-Sensitive Networking (TSN) erweitert das klassische Ethernet um Mechanismen auf Layer 2 des ISO/OSI-Modells, um diesen Determinismus zu gewährleisten. Das Fundament aller TSN-Mechanismen ist eine gemeinsame Zeitbasis aller Netzwerkknoten. Diese wird durch den Standard IEEE 802.1AS bereitgestellt.
 
 == Das Zeitsynchronisationsprotokoll IEEE 802.1AS
-Dieses Kaptiel beschreibt das Zeitsynchronisationsprotokoll IEEE 802.1AS, das im TSN-Kontext auch als gPTP (Generalized Precision Time Protocol) bezeichent wird. gPTP definiert Verfahren, um die Clocks verteilert System über ein lokases Netzwerk im Sub-Mikrosekundenbereich zu synchronisieren. Im Folgenden werden die Abgrenzungen zu anderen Protokollen, die Netzwerktopologie, die Synchronisations- und Messmechanismen sowie die Rolle einer gPTP-Bridge im Detail erläutert.
+Dieses Kapitel beschreibt das Zeitsynchronisationsprotokoll IEEE 802.1AS, das im TSN-Kontext auch als gPTP (Generalized Precision Time Protocol) bezeichent wird. gPTP definiert Verfahren, um die Clocks verteilert System über ein lokases Netzwerk im Sub-Mikrosekundenbereich zu synchronisieren. Im Folgenden werden die Abgrenzungen zu anderen Protokollen, die Netzwerktopologie, die Synchronisations- und Messmechanismen sowie die Rolle einer gPTP-Bridge im Detail erläutert.
 
 
 === Einordnung und Abgrenzung
-Um die Notwendigkeit von gPTP besser zu verstehen, muss es gegeüber dem im Internet etablierten Network Time Protocol (NTP) sowie dem ursprünglichem Precision Time Protocol (PTPv2/IEEE 1588) abgegrenzt werden.
+Um die Notwendigkeit von gPTP besser zu verstehen, muss es gegenüber dem im Internet etablierten Network Time Protocol (NTP) sowie dem ursprünglichem Precision Time Protocol (PTPv2/IEEE 1588) abgegrenzt werden.
 
 #figure(
   table(
@@ -96,7 +96,7 @@ Ein weiterer wichtiger Mechanismus ist das berechenen des `propagation Delays`. 
 Der Mechanismus nutzt drei Arten von Nachrichten:
 Der Initiator sendet zuerst ein `pDelay_Req`. Dabei wird beim Senden der Nachricht der Zeitstempel $t_1$ und beim Empfangen durch den Partner der Zeitstempel $t_2$ aufgenommen. Anschließend sendet der Empfänger das Paket `pDelay_Resp` zurück, wobei die Zeitstempel $t_3$ (Senden) und $t_4$ (Empfangen) erfasst werden. Mit der Nachricht `pDelay_Resp_Follow_Up` wird zuletzt der Zeitstempel t3 an den Initiator übermittelt.
 
-Da der Initiator nun alle vier Zeitstempel besitzt, kann die Berechnung wiefolgt durchgeführt werden:
+Da der Initiator nun alle vier Zeitstempel besitzt, kann die Berechnung wie folgt durchgeführt werden:
 
 $t_("ir") = t_2 - t_1\
 t_("ri") = t_4 - t_3\
