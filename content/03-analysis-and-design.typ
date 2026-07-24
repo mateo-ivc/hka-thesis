@@ -12,17 +12,17 @@ Annex B des Standards definiert eine reihe an Leistungsanforderungen, an denen s
 
 #figure(
   table(
-    columns: (1.5fr, 1fr, 1fr),
+    columns: (1.5fr, 0.5fr, 1fr),
     align: (left, left, left),
     stroke: none,
     table.hline(),
     tab-h[Anforderung], tab-h[Beschreibung], tab-h[Grenzwert],
     table.hline(stroke: 0.5pt),
-    tab-h[Residence Time], tab-h[], tab-h[$<= 10m s$],
-    tab-h[pDelay Turnaround Time ], tab-h[], tab-h[$<= 10m s$],
-    tab-h[E2E-Synchronisationsgenauigkeit], tab-h[], tab-h[$<=1mu s$],
-    tab-h[Granularität der LocalCLock], tab-h[], tab-h[$<=40m s$],
-    tab-h[meanLinkDelayThresh], tab-h[], tab-h[$"   "800n s$],
+    tab-h[Residence Time @ieee8021as2025[B.2.2]], tab-h[], tab-h[$<= 10m s$],
+    tab-h[pDelay Turnaround Time @ieee8021as2025[B.2.3]], tab-h[], tab-h[$<= 10m s$],
+    tab-h[E2E-Synchronisationsgenauigkeit @ieee8021as2025[B.3]], tab-h[], tab-h[$<=1mu s$],
+    tab-h[Granularität der LocalCLock @ieee8021as2025[B.1.2]], tab-h[], tab-h[$<=40n s$],
+    tab-h[meanLinkDelayThresh @ieee8021as2025[11.2.2]], tab-h[], tab-h[$"   "800n s$],
     table.hline(),
   ),
   caption: [gPTP Leistungsanforderungen nach Annex B],
@@ -30,7 +30,7 @@ Annex B des Standards definiert eine reihe an Leistungsanforderungen, an denen s
 
 Die Residence Timer bezeichnet die maximale Zeit, die eine Sync-Nachircht innerhalb einer Time-Aware Bridge vom Eingang bis Ausgang benötigt. Die pDelay Turnaround Time beschreibt wie lange ein System zum Verabeiten der pDelay_Resp-Nachricht brauchen darf. Beide Werte begrenzen wie schnell eine Bridge die zugehörige Berechnung durchführen muss.
 
-Die E2E-Synchronisationsgenauigkeit gilt laut Annex B.3 kumulativ über die gesamte Kette - vorrausgesetzt die Kette ist nicht größer als sieben Hops - und erfordert, dass alle Geräte zu einem gewissen Grad Synchronisiert sind.
+Die E2E-Synchronisationsgenauigkeit gilt laut @ieee8021as2025[B.3] kumulativ über die gesamte Kette - vorrausgesetzt die Kette ist nicht größer als sieben Hops - und erfordert, dass alle Geräte zu einem gewissen Grad Synchronisiert sind.
 
 Die Granularität der LocalClock beschreibt die minimal Auflösung mit der die lokale Clock die Zeit erfassen muss, und ist damit Vorraussetzung für die anderen drei Anforderungen: Eine gröbere Granularität würde bereits zu Messungenauigkeiten bei der residence Time und pDelay Messung führen.
 
@@ -79,7 +79,7 @@ Damit eine korrekte Synchronisierung gewährleistet werden kann müssen allerdin
 
 2. Zeitstempel durch Messrauschen verfälscht werden können, darf die Rate-Korrektur zwischen Master und Slave nicht direkt aus einzelnen Timestamp-Differenzen abgeleitet werden, da dies zu einer Instabilen Regelung führen würde. Um dies zu verhindern, wird ein PI-Regler eingesetzt, der die Messewerte über meherere Sync-Intervalle glättet und daraus ein robustes rateRatio berechnet.
 
-Neben diesen beiden Anforderungen fordert Annex B.2.4 außerderm den Nachweis, dass die interne Synchronisierung zwischen Master und Slave eine Genauigkeit von 0,1ppm erreicht. Um dies nachzuweisen, wir wie folgt vorgegangen:
+Neben diesen beiden Anforderungen fordert @ieee8021as2025[B.2.4] außerderm den Nachweis, dass die interne Synchronisierung zwischen Master und Slave eine Genauigkeit von 0,1ppm erreicht. Um dies nachzuweisen, wir wie folgt vorgegangen:
 
 1. Einschwingzeit abwarten, damit sich der PI-Regelr auf einen stabilen Zustand einschwingen kann.
 
@@ -102,7 +102,7 @@ Konkret werden folgendet Daten für die spätere Auswertung geloggt:
 - pDelay -> timestamps der einzelnen Nachrichten ($t_1$ bis $t_4$)
 - PPS-Offset
 - rateRatio
--
+
 
 
 // == Ungenauigkeiten

@@ -41,7 +41,7 @@ Um die Notwendigkeit von gPTP besser zu verstehen, muss es gegenüber dem im Int
     tab-d[Ziel], tab-d[Generell], tab-d[Weiträumige Netzwerke], tab-d[lokale, Zeitkritische Systeme],
     table.hline(),
   ),
-  caption: [Vergleich NTP, PTPv2 und gPTP],
+  caption: [Vergleich NTP, PTPv2 und gPTP @ieee8021as2025[8.5]],
 )<comparison-ptp-gptp>
 
 
@@ -80,7 +80,7 @@ Bei dem im @sync-mechanism (linke Seite) dargestellten Two-Step-Verfahren erfolg
 
 1. Sync-Nachricht: Der Master sendet eine Sync-Nachricht an den Slave. Dabei werden der Sendezeitpunkt ($t_{s}$) auf Master-Seite und der Empfangszeitpunkt ($t_{r}$) auf Slave-Seite erfasst.
 
-2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt (preciseOriginTimestamp), das correctionField sowie die rateRatio.
+2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt (preciseOriginTimestamp), das correctionField sowie die rateRatio.@ieee8021as2025[11.4]
 
 Dieser kann auch in einem Schritt erfolgen. Dabei werden wie in der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen im Sync-Paket übermittelt.
 
@@ -102,15 +102,15 @@ $t_("ir") = t_2 - t_1\
 t_("ri") = t_4 - t_3\
 D = (t_("ir") + t_("ri"))/2 = ((t_4 - t_1) - (t_3 - t_2))/2$
 
-Das Ergebnis $D$ entspricht dem durchschnittlichen `propagation Delay`.
+Das Ergebnis $D$ entspricht dem durchschnittlichen `propagation Delay`.@ieee8021as2025[11.2]
 === Der Synchronisationsmechanismus
 Nachdem der Slave alle Informationen erhalten hat, führt er die finale Synchronisation der lokalen Clock durch. Dieser Prozess besteht aus drei Schritten:
 
-1. *Berechnung der korrigierten Zeit:* Der Slave nutzt den `precisionOriginTimestamp` als Basiszeit des Grandmasters und addiert das `correctionField` hinzu. Das `correctionField` kompensiert dabei Laufzeitdifferenzen, die durch Zwischenkonoten entstanden sind. Die Summe ergbit die synchronisierte Zeit zum Zeitpunkt des Absendens der Sync-Nachricht.
+1. *Berechnung der korrigierten Zeit:* Der Slave nutzt den `precisionOriginTimestamp` als Basiszeit des Grandmasters und addiert das `correctionField` hinzu. Das `correctionField` kompensiert dabei Laufzeitdifferenzen, die durch Zwischenkonoten entstanden sind. Die Summe ergbit die synchronisierte Zeit zum Zeitpunkt des Absendens der Sync-Nachricht.@ieee8021as2025[11.6]
 
-2. *Einbeziehung der Leitungsverzögerung:* Um den absoluten Zeitversatz zur Master-Uhr zu bestimmen, addiert der Slave die zuvor gemessene Leitungsverzögerung ($D$) zu der korrigierten Zeit. Der Vergleich mit dem eigenen Empfangszeitpunkt ($t_r$) ergibt den aktuellen Offset, um den die lokale Uhr korrigiert werden muss.
+2. *Einbeziehung der Leitungsverzögerung:* Um den absoluten Zeitversatz zur Master-Uhr zu bestimmen, addiert der Slave die zuvor gemessene Leitungsverzögerung ($D$) zu der korrigierten Zeit. Der Vergleich mit dem eigenen Empfangszeitpunkt ($t_r$) ergibt den aktuellen Offset, um den die lokale Uhr korrigiert werden muss.@ieee8021as2025[11.6]
 
-3. *Frequenzanpassung (Syntonisierung):* Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet der Slave die rateRatio. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.
+3. *Frequenzanpassung (Syntonisierung):* Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet der Slave die rateRatio. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.@ieee8021as2025[11.6]
 
 === Die gPTP Bridge
 Anders als ein klassicher Ethernet-Switch, der Frames auf Layer 2 im Store-and-Forward-Verfahren rein weiterleitet, nimmt eine Time-Aware Bridge aktiv am gPTP-Protokoll teil. Dabei terminiert die Bridge eingehende Sync-Nachrichten auf dem Slave-Port und generiert auf den Master-Ports eigene, neue Sync- und Follow_Up Nachrichten für die nachfolgenden Geräte. Diese aktive Beteiligung ist notwendig, damit sowohl die im vorherigen Abschnitt beschriebenen Leitungsverzögerungen als auch die interne Verarbeitsungszeit an jedem Hop korrekt kompensiert werden und sich Messfehler nicht unkontrolliert über mehrere Bridges hinweg akkumulieren.
@@ -122,7 +122,7 @@ Damit die Bridge eine eingehende Sync-Nachricht korrekt an ihre Master-Ports wei
 2. *Messung der `residence time`:* Bevor die Bridge die Nachricht weiterleiten kann, durchläuft diese intern den Netzwer-Stack des Geräts. Die dafür benötigte Zeitspanne bis zum Abesende auf dem Master-Port zum Zeitpunkt $t_s$ wird als `residence time` bezeichent und ergibt sich aus $t_s - t_r$.
 
 3. *Aktualisierung der `rateRatio`:* Die Bridge verknüpft die im Follow_Up empfangene `rateRatio` mit der über den in Abbildung 2.2 beschriebenen pDelay-Mechanismus lokal gemessenen `neighborRateRatio` (dem Frequenzverhältnis zur Master Clock): $ "rateRatio"_("neu") = "rateRatio"_("alt") dot "neighborRateRatio" $
-  Dadurch bleibt die `rateRatio` über beliebig viele Hops hinweg gültig und beschreibt stets das Frequenzverhältnis zwischen der Grandmaster Clock und der lokalen Clock der Bridge.
+  Dadurch bleibt die `rateRatio` über beliebig viele Hops hinweg gültig und beschreibt stets das Frequenzverhältnis zwischen der Grandmaster Clock und der lokalen Clock der Bridge.@ieee8021as2025[B.2.2]
 
 4. *Aktualisierung des `correctionField`:* Zum eingehenden `correctionField` addiert die Bridge sowohl die gemessene Leitungsverzögerung $D$ (skaliert mit der eingehenden `rateRatio`) als auch die zuvor ermittelte `residence time` (skaliert mit der soeben aktualisierten `rateRatio`):
 $
