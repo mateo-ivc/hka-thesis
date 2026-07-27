@@ -46,25 +46,15 @@ Neben den normativen Zeitanforderungen ergeben sich aus dem gewählten Testaufba
 
 
 == Testaufbau
-Für den Nachfolgenden Testaufbau werden drei Phyboard Atlas als Bridge verwendet. Diese verfügen jeweils über zwei Ports, wovon einer von einem 1Gbit/s PHY mit SFD-Erkennung gesteuert wird und der andere von einem 100/10Mbit/s PHY ohne SFD-Erkennung.
+Für den nachfolgenden Testaufbau werden drei phyBOARD-Atlas-Boards als Bridge eingesetzt. Diese verfügen jeweils über zwei Ports, deren Zeitstempel beide im MAC erfasst werden (MAC-Timestamping). Die beiden Ports unterscheiden sich jedoch in ihrem PHY: Der 1GBit/s-Port nutzt einen PHY mit SFD-Erkennung und liefert damit die Voraussetzung für SFD-Timestamping @ti_dp83867e, während der 100/10MBit/s-Port über keine SFD-Erkennung verfügt und somit ausschließlich auf das gewöhnliche Interface-Signal angewiesen ist @microchip_ksz8081. Dadurch lässt sich der Einfluss der SFD-Erkennung auf die Zeitstempel-Genauigkeit innerhalb desselben Testaufbaus direkt vergleichen.
 //(Muss ich hier erklären, wieso diese Hardware verwendet wird?)
 
-Des weiteren sollen zwei STM32H7 verwendet werden, um zum einem als Grandmaster Clock und zum anderen als Endpoint. Dadurch lässt sich ein Testaufbau mit maximal 4 Hops gestalten. Dies erzwingt allerdings das abschalten des BMCA um den einzelnen System ihre feste Rolle zu geben.
+Des Weiteren werden zwei STM32H7-Boards eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungiert. Beide verfügen ebenfalls über einen 10/100MBit/s-PHY ohne SFD-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten. Dies erzwingt allerdings das Abschalten des Best Master Clock Algorithm (BMCA), um den einzelnen Systemen ihre feste Rolle zuzuweisen.
 
-Da in dieser Arbeit nur die Bridgefunktion validiert werden soll, ist es nicht nötig die Grandmaster Clock zu einer externen Zeitquelle zu synchronisieren. Daher wird diese Clock im freerunning-mode betrieben.
+
+Da in dieser Arbeit nur die Bridgefunktion validiert werden soll, ist es nicht nötig, die Grandmaster Clock zu einer externen Zeitquelle zu synchronisieren. Daher wird diese Clock im Free-Running-Mode betrieben.
 
 pDelay und Sync-Nachrichten werden nach den Standard werten auf jeweils 1Hz für pDelay und 8Hz für Sync gesendet.
-
-== Timestamping
-//https://www.ti.com/lit/wp/snla465/snla465.pdf?ts=1784483809731
-//https://www.ti.com/lit/ds/symlink/dp83867e.pdf?ts=1784535520366&ref_url=https%253A%252F%252Fwww.ti.com%252Fproduct%252FDP83867E
-// https://ww1.microchip.com/downloads/aemDocuments/documents/UNG/ProductDocuments/DataSheets/KSZ8081RNA-RND-10BASE-T-100-BASE-TX-PHY-with-RMII-Support-DS00002199F.pdf
-
-Wie bereits im Grundlagen Kapitel besprochen, kann man Timestamps direkt über die Hardware, als auch einen Layer später über den MAC erfassen. \
-Für diesen Versuch ist die verwendung von der MAC-Timestamping erzwingend, da beide PHYs der Bridge nicht über die Fähigkeit des direkten PHY Timestamping verfügen.\
-Desweiteren besitzt der 1Gbit/s PHY über eine SFD erkennung, was bedeutet, dass der PHY einen SFD-Pulse an den MAC sendet, wenn immer ein Start-Of-Frame-Delimiter erkannt wird. Bei dem 10/100Mbit/s PHY ist dies leider nicht der Fall, weshalb es bei Messungen zu ungenaueren Timestamp oder erhöhtem Jitter kommen kann.
-
-
 
 == Interne Bridge Synchronisierung
 
@@ -93,19 +83,19 @@ Liegt die berechnete Standardabweichung $sigma$ innerhalb der geforderten 0,1ppm
 
 
 == Messmethodik
-Um die tatsächlich errichte Synchronisierungsegenauigkeit des Testaufbaus zu überprüfen reicht eine rein software-setige Betrachtung der berechneten Offsets nicht aus, da diese bereits durch den Synchronisierungsalgorithmus korrigiert werden. Stattdessen wird die Synchronisierung über einen unabhängigen Hardware-Trigger am jeweiligen Mikrokontroller nachgewiese: Sowohl die Master- als auch die Slave-Clock legen ein PPS-Signal (Pulse-Per-Second) auf einen GPIO-Pin, welches direkt aus dem internen Timer der jeweiligen Clock abgeleitet wird und damit unabhängig von gPTP-Stack ist. Die zeitliche Differenz zwischen den beiden PPS-Flanken entspricht dem tatsächlichen Offset zwischen Master und Slave und lässt sich extern messen.
+Um die tatsächlich erreichte Synchronisierungsgenauigkeit des Testaufbaus zu überprüfen, reicht eine rein softwareseitige Betrachtung der berechneten Offsets nicht aus, da diese bereits durch den Synchronisierungsalgorithmus korrigiert werden. Stattdessen wird die Synchronisierung über einen unabhängigen Hardware-Trigger am jeweiligen Mikrocontroller nachgewiesen: Die zu vergleichenden Clocks legen jeweils ein PPS-Signal (Pulse-per-Second) auf einen GPIO-Pin, welches direkt aus dem internen Timer der jeweiligen Clock abgeleitet wird und damit unabhängig vom gPTP-Stack ist. Die zeitliche Differenz zwischen zwei PPS-Flanken entspricht dem tatsächlichen Offset zwischen den beiden Clocks und lässt sich extern messen.
 
-Für die Erfassung der PPS-Signale wird ein Oszilloskop verwendet: Die PPS-Flanken von Master und Slave werden gleichzeitig aufgenommen und als Rohdaten exportiert. Ein Auswertungsskript berechnet anschließend die zeitliche Differenz zwischen den Signalen und bestimmt daraus den PPS-Offset über die gesamte Messdauer.
+Für die Erfassung wird ein Oszilloskop mit vier Kanälen eingesetzt. Einer dieser Kanäle ist in jeder Messung fest dem Grandmaster (GM) zugeordnet, da dessen Clock die Referenz ist, auf die sich alle übrigen Geräte synchronisieren. Die verbleibenden drei Kanäle werden je nach Messziel unterschiedlich belegt: Zur Validierung einer einzelnen Bridge werden GM, Slave-Port und Master-Port derselben Bridge gleichzeitig gemessen. Zur Messung der PHY-Latenz-Asymmetrie werden Messung für Messung Bridges zwischen Grandmaster und Endpoint zwischen geschalten. Da hier 4 Messpukte nicht ausreichen wird die Kette in mehreren Läufen mit unterschiedlichen Messpukten durchgemessen.
 
-Konkret werden folgendet Daten für die spätere Auswertung geloggt:
-- Residence Time
-- pDelay -> timestamps der einzelnen Nachrichten ($t_1$ bis $t_4$)
-- PPS-Offset
-- rateRatio
+Die PPS-Flanken der belegten Kanäle werden dabei jeweils gleichzeitig über mehrere aufeinanderfolgende PPS-Perioden aufgenommen und als Rohdaten exportiert. Ein Auswertungsskript berechnet aus jedem erfassten Flankensatz sowohl den Offset jedes Kanals relativ zum GM als auch die Differenz zwischen benachbarten Kanälen (Hop-zu-Hop-Offset) - je nachdem, welche Größe für die jeweilige Messung relevant ist. Für jeden Offset ergibt sich damit eine Zeitreihe über die gesamte Messdauer, die als Diagramm über der Zeit dargestellt wird.
+
+In diesem Diagramm ist ein charakteristischer Verlauf zu erwarten: Direkt nach dem Start bzw. Link-Up ist der Offset zwischen den Clocks zunächst groß, da noch keine Synchronisierung stattgefunden hat. Mit fortschreitender Regelung durch den Synchronisierungsalgorithmus sinkt der Offset über mehrere Sync-Intervalle hinweg, bis er in einen stabilen Zustand übergeht - dieser Einschwingvorgang macht die Regelung des Synchronisierungsalgorithmus sichtbar. Der Offset läuft dabei nicht exakt gegen null, sondern pendelt im eingeschwungenen Zustand innerhalb eines kleinen Reststreubands, dessen Größe durch die in Abschnitt "Zeitliche Anforderungen" festgelegten Genauigkeitsanforderungen begrenzt sein muss, damit der Testaufbau als konform gilt.
 
 
+== Ungenauigkeiten
+Der pDelay-Machanismus aus @pDelay-mechanism setzt voraus, dass die Singallaufzeit zwischen zwei Ports in beide Richtungen symmetrisch ist @ieee8021as2025[11.2]. Nur unter dieser Annahme lässt sich aus der Summe $t_4 - t_1$ und $t_3 - t_2$ ein einseitiger meanLinkDelay berechnen. Der vorliegende Testaufbau verletzt jedoch diese Annahme. Wie im Kaptiel Timestamping beschrieben verfügt der 1Gbit PHY über eine SFD-Erkennung. Die beiden 10/100Mbit PHYs besitzten diese Funktion jedoch nicht. Der zugehörige MAC muss den Zeitstempel daher an der MAC-PHY-Schnittstelle selbst erzeugen. Alles was in einem Ethernet-Frame vor der SFD steht liegt dadurch innerhalb des Zeitstempels. Zusätzlich ist diese interne Verarbeitungszeit zwischen Sende- und Empfangsrichtung nicht notwendigerweise gleich groß, wodurch die Symmetrieannahme des pDelay-Machanismus verletzt wird. Diese Asymmetrie erkärt, warum an Hops mit einem 10/100Mbit PHY ein deutlich höherer meanLinkDelay gemessen wird.\
+Ein zweiter, indirekter Effekt betrifft die `neighborRateRatio`: Diese wird aus der Steigung aufeinanderfolgender pDelay-Messungen über die Zeit bestimmt berechnet und benötigt daher einen möglichst genauen Zeitstempel, um eine reale Frequenzabweichung im ppb-Bereich überhaupt auflösen zu können. Ist das Rauschen der Zeitstempel größer als dieses Auflösungsvermögen, verschwindet das eigentliche Messsignal im Rauschen - Die Berechnung liefert dann eine rateRatio von exakt 1.000000, nicht weil die beiden Clock tatsächlich identisch liefen, sondern weil die Messmethode zu grob ist um den realen Unterschied zu erkennen @bailleul2023etfa. Da der Testaufbau aus mehreren verknüpfungen ohne SFD-Erkennung besteht, wirkt sich diese Asymmetrie nicht nur an einem einzelnen Hop aus, sondern an jemdem Hop erneut.
 
-// == Ungenauigkeiten
 // //https://www.irit.fr/~Katia.Jaffres/Fichiers/2021ETR.pdf
 // Wo können unginauigkeiten aufkommen bezüglich des timestampens, pDelay & residence Time berechnungen und dem Synchronisieren?
 
