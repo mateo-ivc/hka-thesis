@@ -29,7 +29,7 @@
 // paragraph actually ends (not in the leftover space of the previous page).
 #show par: it => it + content-marker
 
-#set page("a4", background: if isDraft { rotate(24deg, text(150pt, fill: rgb("dedede66"))[*DRAFT*]) })
+// #set page("a4", background: if isDraft { rotate(24deg, text(150pt, fill: rgb("dedede66"))[*DRAFT*]) })
 
 // First page: task assignment (placeholder). For multi-page PDFs add further
 // #image(...) with page: 2, page: 3 ... or remove this block entirely.
@@ -42,6 +42,7 @@
 
 #set page("a4", margin: bodyMargin)
 #set text(size: 12pt)
+
 
 // Declaration of independence and AI usage
 #include "common/declaration.typ"

@@ -1,4 +1,4 @@
-#import "../meta.typ": acr-emph, asm-listing, c-listing, fig-platzhalter-mittel, note
+#import "../meta.typ": acr-emph, asm-listing, c-listing, diff-listing, fig-platzhalter-mittel, note
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Implementierung
@@ -37,28 +37,85 @@ Löst eines der beiden Events aus, wird der zugehörige Zeitstempel über eine M
 Für das STM32H7-Board wurde entsprechend eine Funktion ergänzt, die bei einem Capture-Event ebenfalls den aktuellen Zeitstempel an einen Task übergibt.
 
 === Änderungen im gPTP-Subsystem
-*gptp_messages.c*
+*Synchronisationsaussetzer durch blockierte gPTP-Ports*
 
-Beim senden einer Nachricht z.B. der Sync Nachricht werden die TX-Zeitstempel wieder im gPTP-Subsystem benötigt. Der Zeitstempel selbst wird allerdings erst im MAC aufgenommen. Hier stellt sich das Problem, wie man diesen vom unteren Layer in den oberen bekommt. Zephyr löst dies geschickt über Callbacks. Jede Nachricht die versendet wird, bekommt einen Callback angeängt, welcher ausgeführt wird wenn der Zeitstempel aufgenommen wurde. Problematisch bei der Implementierung war, dass der Edge-Case wenn der Callback für den Zeitstempel nicht ausgeführt wurde - etwa weil die Queue schon voll ist und dadurch das Paket verloren wurde - oder ein `gptp_send_sync()` erneut aufgerufen wurde, bevor der vorherige Callback abgeschlossen war. Dadurch konnte für die nächste Sync-Nachricht keine neuen Callbacks mehr registriert werden, und es kamen keine neuen TX-Zeitstempel mehr an.
+Beim Senden einer Nachricht, die einen exakten Sendezeitpunkt benötigt (z.B. eine Sync-Nachricht), wird dieser Zeitstempel im gPTP-Subsystem für die Erstellung der Follow-Up-Nachricht benötigt. Aufgenommen wird der Zeitstempel jedoch erst im MAC. Um ihn aus dem unteren Layer in den Netzwerkstack zu bekommen, löst Zephyr dies über Callbacks: Beim Senden einer solchen Nachricht wird für den jeweiligen Port ein Callback registriert, der mit dem konkreten Paket verknüpft ist.
+
+Wird das Paket übertragen, nimmt der MAC den Zeitstempel per Interrupt auf und trägt ihn im Paket nach. Da dies im Interrupt-Kontext geschieht, kann der eigentliche Callback nicht direkt dort ausgeführt werden — das Paket wird stattdessen über eine Warteschlange an einen dedizierten Thread übergeben, der den Callback zeitversetzt aufruft.
+
+Bleibt dieser Callback aus — etwa weil das Senden fehlschlägt, die Hardware für dieses Frame keinen Zeitstempel liefert, oder weil er schlicht erst später eintrifft, als die gPTP-Zustandsmaschine auf ihn wartet — bleibt der zugehörige Registrierungs-Slot für den Port belegt. Da pro Port nur ein Slot existiert, kann kein nachfolgendes Paket mehr registriert werden, bis dieser Zustand aufgelöst wird.
+Dadurch kann sich der Zustand der Statemachine nicht ändern und die Synchronisation setzt aus.
+
+Um dieses Problem zu lösen, wurden zwei sich ergänzende Anpassungen im gPTP-Stack vorgenommen.
+Zum einen wird beim Registrieren eines neuen Callbacks in `gptp_send_sync()` geprüft, ob für den Port bereits ein Callback registriert ist und ob dessen Paket-Pointer vom aktuell zu sendenden Paket abweicht. Nur in diesem Fall — wenn also erkennbar noch ein Eintrag für ein altes, nie zurückgemeldetes Paket existiert — wird dieser verworfen und stattdessen ein neuer Callback für das aktuelle Paket registriert.
 
 #figure(
-  c-listing(
-    "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16",
-    "void gptp_send_sync(int port, struct net_pkt *pkt) {\n    if (sync_cb_registered[port - 1] &&\n        sync_timestamp_cb[port - 1].pkt != pkt) {\n        /* stale callback: unregister before re-registering */\n        LOG_WRN(\"Stale TX timestamp cb on port %d\", port);\n        net_if_unregister_timestamp_cb(&sync_timestamp_cb[port - 1]);\n        sync_cb_registered[port - 1] = false;\n    }\n\n    if (!sync_cb_registered[port - 1]) {\n        net_if_register_timestamp_cb(&sync_timestamp_cb[port - 1],\n            pkt, net_pkt_iface(pkt), gptp_sync_timestamp_callback);\n        sync_cb_registered[port - 1] = true;\n    }\n    ...\n}",
-    width: 90%,
+  diff-listing(
+    "void gptp_send_sync(int port, struct net_pkt *pkt){\n"
+      + "+    if (sync_cb_registered[port - 1]) {\n"
+      + "+         if (sync_timestamp_cb[port - 1].pkt != pkt) {\n"
+      + "+              net_if_unregister_timestamp_cb(sync_timestamp_cb[port - 1];\n"
+      + "+              sync_cb_registered[port - 1] = false;\n"
+      + "+        }\n"
+      + "+    }\n"
+      + "     if (!sync_cb_registered[port - 1]) {\n"
+      + "          net_if_register_timestamp_cb(&sync_timestamp_cb[port - 1], pkt, \n"
+      + "          net_pkt_iface(pkt),\n"
+      + "          gptp_sync_timestamp_callback);\n"
+      + "          sync_cb_registered[port - 1] = true;\n"
+      + "     }\n"
+      + "}\n",
+    width: 100%,
   ),
   caption: [Bugfix in gptp_send_sync],
-) <lst:PTP-Clock_config>
+) <lst:sync-callback-fix>
 
-*gptp_md.c:* Sync-send state machine getting Stuck.
-In der Implementierung der SyncSend Statemachine wird überprüft, ob das zuvor gesendete Sync-Nachricht schon eine TX-Zeitstempel generiert hat. Ist dieser im System, kann die Follow_UP-Nachricht versendet werden. Fehlt dieser Zeitstempel z.B. wegen dem zuvor angesprochenem Bug oder kommt aus einem anderen Grund nicht an. Bleibt man in dieser Statemachine dauerhaft im `GPTP_SYNC_SEND_SEND_FUP` Zustand stehen. Dadurch wird ebefalls die Synchronisierung ausgesetzt.
-Die Lösung hierfür ist ein Timeout-Mechanismus, der nach einer gewissen Zeit, den State auf `GPTP_SYNC_SEND_SEND_SYNC` zurücksetzt um so eine neue Sync-Nachricht zu versenden.
+Zum anderen wartet die Zustandsmaschine des Sync-Sendepfads nicht mehr unbegrenzt auf den TX-Zeitstempel: Beim Versenden der Sync-Nachricht wird zusätzlich ein Software-Zeitstempel aufgenommen, anhand dessen die im Zustand GPTP_SYNC_SEND_SEND_FUP verstrichene Zeit gemessen wird. Bleibt der TX-Zeitstempel länger als 3 ms aus, wird der Callback über `gptp_sync_send_abort()` explizit deregistriert und der Zustand zurück auf `GPTP_SYNC_SEND_SEND_SYNC` gesetzt, um den Sync-Mechanismus gezielt neu zu starten, statt auf einen Zeitstempel zu warten, der möglicherweise nie mehr eintrifft.
 
-*gptp_md.c:* Conversion bug - rate rateRatio
+#figure(
+  diff-listing(
+    "case GPTP_SYNC_SEND_SEND_FUP:\n"
+      + "     if (state->md_sync_timestamp_avail) {\n"
+      + "          // send Follow_Up message ....\n"
+      + "          state->state = GPTP_SYNC_SEND_SEND_SYNC;\n"
+      + "+     } else if ((k_uptime_get() - state->sync_sent_uptime_ms) >=\n"
+      + "+          GPTP_SYNC_TS_TIMEOUT_MS) {\n"
+      + "         \n"
+      + "+          gptp_sync_send_abort(port);\n"
+      + "+          state->md_sync_timestamp_avail = false;\n"
+      + "+          if (state->sync_ptr) {\n"
+      + "+               net_pkt_unref(state->sync_ptr);\n"
+      + "+               state->sync_ptr = NULL;\n"
+      + "+          }\n"
+      + "+          state->state = GPTP_SYNC_SEND_SEND_SYNC;\n"
+      + "+     }\n"
+      + "      break;\n"
+      + "}",
+    width: 100%,
+  ),
+  caption: [Timeout-Mechanismus gegen das Hängenbleiben der Sync-Send-Statemachine],
+) <lst:sync-send-timeout>
 
-Die wichtigste Aufgabe die eine Bridge hat, ist einen richtigen `correctionField` zu übermitteln.
-Während das versenden korrekt Implementiert wurde hat sich ein kleiner Bug in dessen Berechnung eingeschlichen.\
-Im Standard ist das `correctionField` vom Typ int64, das es einen positiven als auch negativen wert annehmen kann. Da Daten zwischen Netz- und Host-System sich in ihrer Endianness untescheiden können, ist hier eine Konvertierung zwischen Big- und Little-Endian unbedingt nötigt. Zephyr Implementiert diese auch, allerdings gibt die `net_htonll()` Funktion die für die Konvertierung verwendet wird `uint64` Wert zurück. Das führte dazu, dass bei einem eingtlich Negativen  `correctionField` die Konvertierung von int64 -> uint64 -> double in eine hohe positive Zahl resultiert. Dadurch sind alle anschließenden Berechnung fehlerhaft und die Clock wird nicht Synchronisiert.
+*gptp_md.c:* Conversion-Bug beim `correctionField`
+
+Die wichtigste Aufgabe, die eine Bridge beim Weiterleiten einer Sync-Nachricht hat, ist die korrekte Fortschreibung des `correctionField`. Dazu addiert sie zu dem eingehenden, ererbten `correctionField` die mit der `rateRatio` skalierte `residence time` (im Code `delay_ns`), die sich aus der Differenz zwischen dem lokalen Sendezeitpunkt und dem empfangenen Zeitstempel der vorgelagerten Instanz ergibt. Da beide Zeitstempel aus zwei physisch getrennten, nicht zwingend bereits eingeschwungenen Uhren stammen, kann diese Differenz - etwa kurz nach dem Start einer Instanz oder bei einem kurzzeitigen Offset zwischen den Timern - auch negativ ausfallen, wodurch in der Folge auch das gesamte berechnete `correctionField` negativ werden kann. Das ist kein Fehlerfall: Der Standard definiert das `correctionField` bewusst als vorzeichenbehafteten 64-bit-Wert, gerade damit auch solche negativen Korrekturen abgebildet werden können.\
+Die Implementierung muss diesen negativen Wertebereich also korrekt behandeln können und genau hier lag der Fehler.
+
+Da sich Netz- und Host-Byte-Order unterscheiden können, muss das `correctionField` vor dem Versenden konvertiert werden. Zephyr stellt dafür `net_htonll()` bereit, dessen Rückgabetyp allerdings `uint64_t` ist. Ohne einen expliziten Rück-Cast auf `int64_t` wird ein eigentlich negatives `correctionField` bei der weiteren Verarbeitung fälschlicherweise als vorzeichenlose Zahl behandelt: Aus einem kleinen negativen Korrekturwert im Nanosekundenbereich wird dadurch eine um viele Größenordnungen zu hohe positive Zahl.
+
+#figure(
+  diff-listing(
+    "hdr->correction_field = sync_send->follow_up_correction_field +\n"
+      + "     (int64_t)(sync_send->rate_ratio * delay_ns);\n"
+      + "\n"
+      + "-hdr->correction_field = net_htonll(hdr->correction_field << 16);\n"
+      + "+hdr->correction_field = (int64_t)net_htonll(hdr->correction_field << 16);",
+    width: 100%,
+  ),
+  caption: [Fehlender Rück-Cast auf int64_t bei der Konvertierung des correctionField],
+) <lst:correction-field-fix>
+
+Da das `correctionField` unmittelbar in die Berechnung der synchronisierten Zeit auf der Empfängerseite einfließt, wirkt sich dieser Fehler direkt und ungedämpft auf das Ergebnis aus: Statt einer kleinen, im Nanosekundenbereich liegenden Korrektur erhält der Slave einen um mehrere Größenordnungen zu großen Wert, wodurch die berechnete Zeit um denselben Betrag verfälscht wird. Die Clock wird dadurch nicht etwa ungenau synchronisiert, sondern springt bei jeder betroffenen Sync-Nachricht auf einen völlig falschen Wert. Eine Synchronisierung findet in diesem Fall faktisch nicht mehr statt.
 
 
 == Implementierung der Bridge Synchronisation
@@ -75,13 +132,7 @@ Der Task berechnet aus den beiden Zeitstempeln einen einfachen Phasenfehler zwis
 Liegt der Phasenfehler innerhalb der Schwelle, wird stattdessen die Zählrate des Timers der Master-Instanz über einen PI-Regler angepasst:
 Aus dem Phasenfehler berechnet der Regler eine Korrektur in ppb (parts per billion), mit der sich die Zählrate der Master-Instanz schrittweise an die der Slave-Instanz annähert.
 
-/* todo: mehr inhalt mitrein bringen:
 
-
-
-aktuell ist noch ein fester korrektur wert von 120ns drin. -> Durch messungen konnte ein 120ns offset erkannt werden.
-
-*/
 #figure(
   c-listing(
     "1\n2\n3\n4\n5\n6\n7\n8\n9\n10",

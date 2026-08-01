@@ -66,7 +66,7 @@ In einer gPTP-Domäne wird zwischen drei primären Gerätetypen unterschieden:
 
 === Die Sync-Nachricht
 
-Um das Prinzip der Zeitsynchronisierung zu verstehen, muss zunächst die Funktionsweise einer Clock in digitalen System verstanden werden. Jeder CPU besitzt einen internen Taktgeber (Hardware-Oszillator), der als Frequenzquelle dient.
+Um das Prinzip der Zeitsynchronisierung zu verstehen, muss zunächst die Funktionsweise einer Clock in digitalen System verstanden werden. Jede CPU besitzt einen internen Taktgeber (Hardware-Oszillator), der als Frequenzquelle dient.
 Ein Hardware-Timer zählt die Schwingungen dieses Oszillators und bildet daraus die lokale Systemzeit ab. Aufgrund von Fertigungstoleranzen, Temparaturschwankungen und Alterungen weisen diese Quarze jedoch eine geringfügige Frequenzabweichung sowie einen Phasenversatz zur Refferenzzeit auf. Ohne eine dauerhafte Korrektur laufen die Uhren im Laufe der Zeit auseinander.
 
 Der Synchronisationsmechanismus gleicht diesen Versatz aus, indem die lokale Clock periodisch an die Zeitbasis des Masters angepasst wird. Hierbei unterscheidet der Standard zwischen zwei Verfahren: dem *Two-Step*- und dem *Single-Step*-Verfahren, wie in @sync-mechanism dargestellt.
@@ -80,9 +80,15 @@ Bei dem im @sync-mechanism (linke Seite) dargestellten Two-Step-Verfahren erfolg
 
 1. Sync-Nachricht: Der Master sendet eine Sync-Nachricht an den Slave. Dabei werden der Sendezeitpunkt ($t_{s}$) auf Master-Seite und der Empfangszeitpunkt ($t_{r}$) auf Slave-Seite erfasst.
 
-2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt (preciseOriginTimestamp), das correctionField sowie die rateRatio.@ieee8021as2025[11.4]
+2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt (`preciseOriginTimestamp`), das `correctionField` sowie die `rateRatio`.@ieee8021as2025[11.4]
 
-Dieser kann auch in einem Schritt erfolgen. Dabei werden wie in der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen im Sync-Paket übermittelt.
+  - *`preciseOriginTimestamp`:* Der zuvor auf Master-Seite erfasste Sendezeitpunkt $t_s$, ausgedrückt in der Zeitbasis der Grandmaster Clock. Er bildet die eigentliche Referenzzeit, auf die sich alle weiteren Korrekturen beziehen.
+
+  - *`correctionField`:* Ein von der Grandmaster Clock mit dem Wert null initialisierter Korrekturwert, der auf dem Weg zum Slave alle Verzögerungen aufsummiert, die im `preciseOriginTimestamp` noch nicht enthalten sind – insbesondere die gemessene Leitungsverzögerung sowie, sofern die Nachricht über zwischengeschaltete Bridges läuft, deren Verweildauer (residence time). Damit lässt sich der tatsächliche Sendezeitpunkt der Grandmaster Clock trotz dieser Verzögerungen exakt rekonstruieren.
+
+  - *`rateRatio`:* Das Verhältnis der Frequenz der Grandmaster Clock zur Frequenz der lokalen Clock des Slaves. Ausgehend vom Wert eins bei der Grandmaster Clock wird sie über jeden Hop hinweg fortgeschrieben und beschreibt so stets das aktuelle Frequenzverhältnis zur ursprünglichen Zeitquelle (siehe Abschnitt „Die gPTP Bridge"). Neben der Offset-Korrektur erlaubt sie dem Slave dadurch auch, seine lokale Taktrate an die des Masters anzupassen.
+
+Dieser Ablauf kann auch in einem Schritt erfolgen. Dabei werden, wie auf der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen im Sync-Paket übermittelt.
 
 
 === Messung der Leitungsverzögerung
@@ -141,13 +147,15 @@ Aus diesem Grund wird für gPTP-fähige Systeme dedizierte Netzwerk-Hardware ben
 *TODO:* SFD-Erkennung erklären
 
 === PHY vs. MAC Timestamping
-Für die im vorherigen Abschnitt beschriebenen Mechanismen — insbesondere die Messung der Leitungsverzögerung sowie der `residence time` — ist die Genauigkeit der Zeitstempel $t_1$ bis $t_4$ bzw. $t_r$ und $t_s$ entscheidend. Ein Hardware-Zeitstempel wird dabei erfasst, sobald ein definiertes Referenzsignal ( der Start Frame Delimiter, SFD) einer Ethernet-Nachricht erkannt wird. Je nachdem, an welcher Stelle im Signalpfad dieser Zeitpunkt erfasst wird, unterscheidet der Standard zwei Verfahren:
+Für die im vorherigen Abschnitt beschriebenen Mechanismen — insbesondere die Messung der Leitungsverzögerung sowie der `residence time` — ist die Genauigkeit der Zeitstempel $t_1$ bis $t_4$ bzw. $t_r$ und $t_s$ entscheidend. Ein Hardware-Zeitstempel wird dabei erfasst, sobald ein definiertes Referenzsignal (der Start Frame Delimiter, SFD) einer Ethernet-Nachricht erkannt wird. Der zugehörige Zeitstemepl kann dabei an drei unterschiedlichen Zeitpunkten aufgenommen werden:
 
-- *PHY-Timestamping:* Der Zeitstempel wird direkt im Physical-Layer-Baustein (PHY) erfasst, in dem Moment, in dem das Signal auf der physischen Leitung erkannt wird. Da hier keine weitere Verarbeitung oder Signalübertragung zwischen Erfassung und physischer Leitung liegt, gilt dieses Verfahren als das genaueste.
+- *PHY-Timestamping:* Der Zeitstempel wird direkt im Physical-Layer-Baustein (PHY) erfasst, in dem Moment, in dem das Signal auf der physischen Leitung erkannt wird. Da hier keine weitere Verarbeitung oder Signalübertragung zwischen Erfassung und physischer Leitung liegt, gilt dieses Verfahren als das genaueste@ti_snla242.
 
-- *MAC-Timestamping:* Der Zeitstempel wird erst in der Media-Access-Control-Schicht (MAC) erfasst, nachdem der PHY dem MAC über eine dedizierte Schnittstelle signalisiert hat, dass ein Frame eingelesen wurde. Zwischen der eigentlichen physischen Ankunft des Signals und der Zeitstempel-Erfassung liegt dadurch eine zusätzliche, von der verwendeten Schnittstelle abhängige Latenz.
+- *MAC-Timestamping:* Der Zeitstempel wird erst in der Media-Access-Control-Schicht (MAC) erfasst, nachdem der PHY dem MAC über eine dedizierte Schnittstelle signalisiert hat, dass ein Frame eingelesen wurde. Zwischen der eigentlichen physischen Ankunft des Signals und der Zeitstempel-Erfassung liegt dadurch eine zusätzliche, von der verwendeten Schnittstelle abhängige Latenz. Diese Latenz ist dabei nicht zwangsläufig konstant: Da MAC und PHY in der Regel unabhängige Taktquellen besitzen, muss das Interface-Signal beim Übergang in die Taktdomäne des MAC synchronisiert werden (clock domain crossing), was zusätzlichen Jitter erzeugt @ti_snla242.
 
-Diese zusätzliche Latenz stellt keinen reinen Nachteil dar, sofern sie bekannt und konstant ist: Der Standard sieht mit den Korrekturgrößen `ingressLatency` und `egressLatency` einen Mechanismus vor, um Zeitstempel unabhängig vom tatsächlichen Erfassungspunkt auf eine gemeinsame Referenzebene (die *reference plane* an der Media Dependent Interface, MDI) zurückzurechnen  Voraussetzung dafür ist jedoch, dass diese Latenz hinreichend deterministisch ist.
+- *SFD-Timestamping:* Beim SFD-Timestamping wird dagegen nicht das MAC-Interface-Signal, sondern der Start Frame Delimiter (SFD) selbst als Referenzpunkt genommen. Wird der SFD bereits innerhalb des PHYs erkannt, generiert dieser einen Impuls, dessen steigende Flanke bereits bei der SFD-Erkennung ausgelöst wird, noch bevor die restlichen Bits des Frames eingelesen werde sind. Ein solcher SFD-Impuls liefert einen deutlich stabileren und reproduzierbaren Zeitstempel @ti_snla242.
+
+Diese zusätzliche Latenz stellt keinen reinen Nachteil dar, sofern sie bekannt und konstant ist: Der Standard sieht mit den Korrekturgrößen `ingressLatency` und `egressLatency` einen Mechanismus vor, um Zeitstempel – unabhängig davon, ob sie per reinem MAC-Timestamping oder per SFD-Timestamping erfasst wurden – auf eine gemeinsame Referenzebene zurückzurechnen. Voraussetzung dafür ist jedoch in beiden Fällen, dass die jeweilige Latenz hinreichend deterministisch ist – ein Kriterium, das reines MAC-Timestamping aufgrund der beschriebenen Taktdomänen-Problematik tendenziell schlechter erfüllt als SFD-Timestamping @ti_snla242.
 
 == Das Echtzeitbetriebssystem Zephyr
 
