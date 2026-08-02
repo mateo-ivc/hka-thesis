@@ -28,7 +28,7 @@ Annex B des Standards definiert eine reihe an Leistungsanforderungen, an denen s
   caption: [gPTP Leistungsanforderungen nach Annex B],
 )
 
-Die Residence Timer bezeichnet die maximale Zeit, die eine Sync-Nachircht innerhalb einer Time-Aware Bridge vom Eingang bis Ausgang benötigt. Die pDelay Turnaround Time beschreibt wie lange ein System zum Verabeiten der pDelay_Resp-Nachricht brauchen darf. Beide Werte begrenzen wie schnell eine Bridge die zugehörige Berechnung durchführen muss.
+Die Residence Timer bezeichnet die maximale Zeit, die eine Sync-Nachricht innerhalb einer Time-Aware Bridge vom Eingang bis Ausgang benötigt. Die pDelay Turnaround Time beschreibt wie lange ein System zum Verabeiten der pDelay_Resp-Nachricht brauchen darf. Beide Werte begrenzen wie schnell eine Bridge die zugehörige Berechnung durchführen muss.
 
 Die E2E-Synchronisationsgenauigkeit gilt laut @ieee8021as2025[B.3] kumulativ über die gesamte Kette - vorrausgesetzt die Kette ist nicht größer als sieben Hops - und erfordert, dass alle Geräte zu einem gewissen Grad Synchronisiert sind.
 

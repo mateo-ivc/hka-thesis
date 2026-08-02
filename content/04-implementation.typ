@@ -11,22 +11,27 @@ Zephyrs gPTP-Implementierung ist grundsätzlich für Endgeräte mit einer einzig
 === Board Spezifische Änderungen
 //todo: Überschriften umbennenen
 *PTP-Clock Konfiguration*\
-Die Initialisierung der PTP-Clock wurde angepasst. Der ursprüngliche Zephyr-Code konfiguriert nur einen Clock für eine einzelne ENET-Instanz. Für die Bridge wurde allerdings ein zweite, identische konfigurierte Clock für die zweite ENET-Instanz ergänzt. Die Konfiguration einer zweiten Clock ist zwingend notwendig, da eine Instanz physisch nicht mit der Clock der anderen Instanz verbunden werden kann. Beide Clocks werden aus `SYS_PLL1_DIV2` (geteilt durch 20) abgeleitet, was einer Clockfrequenz von $25"MHz"$ entspricht, und erfüllt somit die in Abschnitt 3.4 geforderte Mindestauflösung.
 
-//hier noch schreiben wieso für beide timer nicht ein CLK_ROOT verwendet werden kann: Grund ist das die Hardware verschaltung es nicht zulässt. Siehe S.1426 im Handbuch.
+
+Die Initialisierung der PTP-Clock wurde angepasst. Der ursprüngliche Zephyr-Code konfiguriert nur einen Clock für eine einzelne ENET-Instanz. Für die Bridge wurde ein zweiter, identisch konfigurierte CLock für die zweite ENET-Instanz ergänzt. Beide Clocks werden aus `SYS_PLL1_DIV2` (geteilt durch 20) abgeleitet, was einer Taktfrequenz von $25"MHz"$ entspricht, und erfüllen damit die in Abschnitt 3.4 geforderte Mindestauflösung.
 
 #figure(
-  c-listing(
-    "1\n2\n3\n4\n5\n6\n7\n",
-    "rootCfg.mux = kCLOCK_ENET_TIMER1_ClockRoot_MuxSysPll1Div2;\nrootCfg.div = 20;\nCLOCK_SetRootClock(kCLOCK_Root_Enet_Timer1, &rootCfg);\n\nrootCfg.mux = kCLOCK_ENET_TIMER2_ClockRoot_MuxSysPll1Div2;\nrootCfg.div = 20;\nCLOCK_SetRootClock(kCLOCK_Root_Enet_Timer2, &rootCfg);",
+  diff-listing(
+    "rootCfg.mux = kCLOCK_ENET_TIMER1_ClockRoot_MuxSysPll1Div2;\n"
+      + "rootCfg.div = 20;\nCLOCK_SetRootClock(kCLOCK_Root_Enet_Timer1, &rootCfg);\n"
+      + "\n"
+      + "+rootCfg.mux = kCLOCK_ENET_TIMER2_ClockRoot_MuxSysPll1Div2;\n"
+      + "+rootCfg.div = 20\n"
+      + "+CLOCK_SetRootClock(kCLOCK_Root_Enet_Timer2, &rootCfg);",
     width: 90%,
   ),
   caption: [PTP-Clock Konfiguration],
 ) <lst:PTP-Clock_config>
 
+Ein einzelner, gemeinsam genutzter PTP-Timer für beide Ports ist dabei keine Alternative. In klassischen Switch-ICs, deren Ports über eine gemeinsame, integrierte Switching-Fabric verbunden sind, verteilt genau eine zentraler Clock seinen Zählerstand intern an die Timestamp-Einheiten aller Ports, sodass sich eine zusätzliche Synchronisierung zwischen den Ports von vornherein erübrigt. Auf dem hier eingesetzten SoC ist dieser Weg jedoch nicht umsetzbar: `enet` und `enet1g` sind zwei eigenständige MAC-Peripherien, die ursprünglich für den Einsatz als jeweils einzelne Schnittstelle in einem Endgerät ausgelegt sind. Jede besitzt einen eigenen PTP-Timer, der laut Clock-Baum des Referenzhandbuchs fest mit genau einem eigenen Taktausgang der Clock-Control-Einheit verschaltet ist (`ENET_TIMER1` bzw. `ENET_TIMER2`) @nxp_imxrt1170_refman[S. 1426]; einen internen Pfad, über den sich einer der beiden Taktausgänge zusätzlich auf die jeweils andere Instanz routen ließe, sieht die Hardware nicht vor. Eine Instanz kann folglich nicht an die Clock der anderen angeschlossen werden - weshalb zwei separate Clocks konfiguriert werden müssen und weshalb überhaupt erst die in Abschnitt 3.4 beschriebene bridge-interne Synchronisierung der beiden Timer notwendig wird.
 
 *clock_control/clock_control_mcux_ccm_rev2.c:*
-Die Funktion, über die Zephyr die Taktrate eine Peripherie abfragt (`mcux_ccm_get_subsys_rate()`), gab für beide ENET-Instanzen bisher die Taktrate einer Instanz zurück. Da nun aber zwei unabhängig Taktgeber für die PTP-Timer existieren wurde eine instanzabhängige Zuordnung ergänzt, sodass jede ENET-Instanz die Taktrate ihres eigenen PTP-Timers zurückerhält.
+Da nun zwei unabhängige Taktgeber für die PTP-Timer existieren, muss auch die von Zephyr bereitgestellte Taktraten-Abfrage instanzabhängig auflösen. Der PTP-Clock-Treiber fragt darüber die Taktrate der jeweiligen ENET-Instanz ab und leitet daraus sowohl die Initialisierung des PTP-Timers als auch die Umrechnung seiner Ticks in Nanosekunden ab. Die zuständige Funktion (`mcux_ccm_get_subsys_rate()`) gab jedoch für beide ENET-Instanzen bislang einheitlich die Taktrate derselben Instanz zurück, unabhängig davon, welche Instanz tatsächlich angefragt wurde. Im vorliegenden Aufbau sind beide Clocks zwar identisch konfiguriert, sodass dieser Fehler bislang folgenlos blieb - grundsätzlich hätte eine Instanz dadurch aber einen falschen Wert für ihre eigene Taktrate erhalten, wodurch sowohl die Initialisierung ihres PTP-Timers als auch die spätere Rate-Korrektur auf einer falschen Zeitbasis beruht hätten. Um dies auszuschließen, wurde eine instanzabhängige Zuordnung ergänzt, sodass jede ENET-Instanz zuverlässig die Taktrate ihres eigenen PTP-Timers zurückerhält.
 
 *ptp_clock/ptp_clock_nxp_enet.c:* Die capture und compare funktion der timer wurde richtig gesetzt. Zudem wurde in den Callback die Funktion hinzugefügt, timestamp an einen Task zusenden, wenn ein bei einem Timer das Capture/Compare Event ausgelöst hat.
 Benötigt ist dies, um anschließend beide Timer zu Synchronisieren.
@@ -43,8 +48,7 @@ Beim Senden einer Nachricht, die einen exakten Sendezeitpunkt benötigt (z.B. ei
 
 Wird das Paket übertragen, nimmt der MAC den Zeitstempel per Interrupt auf und trägt ihn im Paket nach. Da dies im Interrupt-Kontext geschieht, kann der eigentliche Callback nicht direkt dort ausgeführt werden — das Paket wird stattdessen über eine Warteschlange an einen dedizierten Thread übergeben, der den Callback zeitversetzt aufruft.
 
-Bleibt dieser Callback aus — etwa weil das Senden fehlschlägt, die Hardware für dieses Frame keinen Zeitstempel liefert, oder weil er schlicht erst später eintrifft, als die gPTP-Zustandsmaschine auf ihn wartet — bleibt der zugehörige Registrierungs-Slot für den Port belegt. Da pro Port nur ein Slot existiert, kann kein nachfolgendes Paket mehr registriert werden, bis dieser Zustand aufgelöst wird.
-Dadurch kann sich der Zustand der Statemachine nicht ändern und die Synchronisation setzt aus.
+Bleibt dieser Callback aus — etwa weil das Senden fehlschlägt, die Hardware für dieses Frame keinen Zeitstempel liefert, oder weil er schlicht erst später eintrifft, als die gPTP-Zustandsmaschine auf ihn wartet — bleibt der zugehörige Registrierungs-Slot für den Port belegt. Da pro Port nur ein Slot existiert, kann kein nachfolgendes Paket mehr registriert werden, bis dieser Zustand aufgelöst wird. Dadurch kann sich der Zustand der Statemachine nicht ändern und die Synchronisation setzt aus.
 
 Um dieses Problem zu lösen, wurden zwei sich ergänzende Anpassungen im gPTP-Stack vorgenommen.
 Zum einen wird beim Registrieren eines neuen Callbacks in `gptp_send_sync()` geprüft, ob für den Port bereits ein Callback registriert ist und ob dessen Paket-Pointer vom aktuell zu sendenden Paket abweicht. Nur in diesem Fall — wenn also erkennbar noch ein Eintrag für ein altes, nie zurückgemeldetes Paket existiert — wird dieser verworfen und stattdessen ein neuer Callback für das aktuelle Paket registriert.
@@ -70,7 +74,7 @@ Zum einen wird beim Registrieren eines neuen Callbacks in `gptp_send_sync()` gep
   caption: [Bugfix in gptp_send_sync],
 ) <lst:sync-callback-fix>
 
-Zum anderen wartet die Zustandsmaschine des Sync-Sendepfads nicht mehr unbegrenzt auf den TX-Zeitstempel: Beim Versenden der Sync-Nachricht wird zusätzlich ein Software-Zeitstempel aufgenommen, anhand dessen die im Zustand GPTP_SYNC_SEND_SEND_FUP verstrichene Zeit gemessen wird. Bleibt der TX-Zeitstempel länger als 3 ms aus, wird der Callback über `gptp_sync_send_abort()` explizit deregistriert und der Zustand zurück auf `GPTP_SYNC_SEND_SEND_SYNC` gesetzt, um den Sync-Mechanismus gezielt neu zu starten, statt auf einen Zeitstempel zu warten, der möglicherweise nie mehr eintrifft.
+Zum anderen wartet die Zustandsmaschine des Sync-Sendepfads nicht mehr unbegrenzt auf den TX-Zeitstempel: Beim Versenden der Sync-Nachricht wird zusätzlich ein Software-Zeitstempel aufgenommen, anhand dessen die im Zustand `GPTP_SYNC_SEND_SEND_FUP` verstrichene Zeit gemessen wird. Bleibt der TX-Zeitstempel länger als 3 ms aus, wird der Callback über `gptp_sync_send_abort()` explizit deregistriert und der Zustand zurück auf `GPTP_SYNC_SEND_SEND_SYNC` gesetzt, um den Sync-Mechanismus gezielt neu zu starten, statt auf einen Zeitstempel zu warten, der möglicherweise nie mehr eintrifft.
 
 #figure(
   diff-listing(
@@ -102,7 +106,7 @@ Die wichtigste Aufgabe, die eine Bridge beim Weiterleiten einer Sync-Nachricht h
 Die Implementierung muss diesen negativen Wertebereich also korrekt behandeln können und genau hier lag der Fehler.
 
 Da sich Netz- und Host-Byte-Order unterscheiden können, muss das `correctionField` vor dem Versenden konvertiert werden. Zephyr stellt dafür `net_htonll()` bereit, dessen Rückgabetyp allerdings `uint64_t` ist. Ohne einen expliziten Rück-Cast auf `int64_t` wird ein eigentlich negatives `correctionField` bei der weiteren Verarbeitung fälschlicherweise als vorzeichenlose Zahl behandelt: Aus einem kleinen negativen Korrekturwert im Nanosekundenbereich wird dadurch eine um viele Größenordnungen zu hohe positive Zahl.
-
+//todo: ist der fix so tragbar? Oder sollte eher dass correctionField in einen uint64 gecasttet werden? C11 6.5.7 sagt aus,dass ein leftshift auf einen negativen wert undefiniert ist.
 #figure(
   diff-listing(
     "hdr->correction_field = sync_send->follow_up_correction_field +\n"
@@ -120,7 +124,7 @@ Da das `correctionField` unmittelbar in die Berechnung der synchronisierten Zeit
 
 == Implementierung der Bridge Synchronisation
 
-Das im Folgenden beschriebene Verfahren ist keine im Standard 802.1AS vorgesehene Funktion, sondern eine Board-spezifische Ergänzung, um das in Abschnitt 3.4 beschriebene Problem zu lösen: Da jede ENET-Instanz einen eigenen, unabhängigen PTP-Timer besitzt, gPTP aber nur den Timer des jeweils synchronisierten Ports korrigiert, würde der zweite (Master-)Port der Bridge sonst dauerhaft unsynchronisiert bleiben. Zur Lösung wurde ein eigener Task angelegt, der die beiden Timer der Bridge gegeneinander synchronisiert.
+Das im Folgenden beschriebene Verfahren ist keine im Standard 802.1AS vorgesehene Funktion, sondern eine Board-spezifische Ergänzung, um das in Abschnitt 3.4 beschriebene Problem zu lösen: Da jede ENET-Instanz einen eigenen, unabhängigen PTP-Timer besitzt, gPTP aber nur den Timer des jeweils synchronisierten Ports korrigiert, würde der zweite (Master-)Port der Bridge sonst dauerhaft unsynchronisiert bleiben. Zur Lösung wurde ein eigener Task angelegt, der den Master-Port des Systems zum Slave-Port synchronisiert.
 
 In Kapitel 4.1.1 wurde bereits beschrieben, wie die Timer-Instanzen Konfiguriert sind. Der Timer der `enet1g` Instanz vergleicht dabei fortlaufend seinen aktuellen Zählerstand mit dem Wert, den man im `ENET_TCCRn` definiert.
 
@@ -131,14 +135,3 @@ Dieser Task übernimmt die eigentliche Regelung: Er sorgt dafür, dass sich die 
 Der Task berechnet aus den beiden Zeitstempeln einen einfachen Phasenfehler zwischen Master- und Slave-Instanz. Überschreitet dieser Phasenfehler 500 ms, wird die Clock der Master-Instanz hart auf die von der Slave-Instanz bekannte Zeit gesetzt, anstatt sie über den PI-Regler langsam anzunähern. Das verkürzt die Einschwingzeit erheblich, da die zu korrigierende Uhr in einem Schritt in die Nähe der Zielzeit gebracht wird - ein Vorteil vor allem dann, wenn ein Gerät neu in ein bereits laufendes System integriert wird und der anfängliche Offset dementsprechend groß ist. \
 Liegt der Phasenfehler innerhalb der Schwelle, wird stattdessen die Zählrate des Timers der Master-Instanz über einen PI-Regler angepasst:
 Aus dem Phasenfehler berechnet der Regler eine Korrektur in ppb (parts per billion), mit der sich die Zählrate der Master-Instanz schrittweise an die der Slave-Instanz annähert.
-
-
-#figure(
-  c-listing(
-    "1\n2\n3\n4\n5\n6\n7\n8\n9\n10",
-    "double better_servo_pi(int64_t nanosecond_diff) {\n    double better_integral = 0.0;\n\n    double better_servo_pi(int64_t nanosecond_diff) {\n    const double Kp = 0.9;\n    const double Ki = 0.1;\n    better_integral += (double)nanosecond_diff;\n\n    return (Kp * (double)nanosecond_diff) + (Ki * better_integral);\n}",
-    width: 90%,
-  ),
-  caption: [PI-Regler für die interne Timer Synchronisierung],
-) <lst:PI-impl>
-

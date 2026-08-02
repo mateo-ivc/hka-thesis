@@ -3,13 +3,9 @@
 
 = Grundlagen
 
-Dieses Kapitel legt die für das Verständnis notwendigen Grundlagen.
-Erklärt werden soll hier wie:
-- Time-Sensitive Networking -> fokussiert auf gPTP
-- Echtzeitbetriebssysteme ZephyrRTOS
-- notwendige Informationen, die später in den Testsetups benötigt werden.
-  - Time-stamps, MAC vs Phy Timestamping,
-  - Sync, pDelay, ...
+Um die in den folgenden Kapiteln beschriebenen Anpassungen sowie deren messtechnische Validierung nachvollziehen zu können, vermittelt dieses Kapitel die dafür notwendigen Grundlagen - dem in der Einleitung skizzierten Trichter von Time-Sensitive Networking bis hin zur konkreten Systemebene folgend.
+
+Zunächst wird Time-Sensitive Networking (TSN) als übergeordnetes Konzept eingeordnet und das darin enthaltene Zeitsynchronisationsprotokoll IEEE 802.1AS (gPTP) im Detail vorgestellt. Dessen Mechanismen - insbesondere Sync- und pDelay-Nachrichten sowie die Rolle einer Bridge - bilden die normative Grundlage, gegen die die in dieser Arbeit untersuchte Implementierung validiert wird. Anschließend werden die hardwareseitigen Voraussetzungen für eine gPTP-konforme Zeitstempelung erläutert, insbesondere die Unterscheidung zwischen MAC- und PHY-Timestamping, da diese für die spätere Einordnung der Messergebnisse von zentraler Bedeutung ist. Abschließend wird das Echtzeitbetriebssystem Zephyr vorgestellt, dessen Architektur und Netzwerk-Subsysteme den Rahmen bilden, innerhalb dessen die in Kapitel 4 beschriebenen Anpassungen umgesetzt wurden.
 
 == Time-Sensitive Networking
 Standard-Ethernet wurde für den maximalen Durchsatz und Fehlertoleranz konzipiert, arbeitet jedoch nach dem Best-Effort-Prinzip. Dies führt in industriellen Anwendungen zu unvorhersehbaren Verzögerungen (Jitter) und Paketverlusten, da Switches Pakete in Warteschlangen (Queues) puffern und bei Überlast verwerfen. Für zeitkritische Steuerungsanwendungen ist jedoch ein deterministisches Zeitverhalten zwingend erforderlich, bei dem die maximale Übertragungsdauer (Bounded Latency) garantiert ist.
@@ -62,12 +58,12 @@ In einer gPTP-Domäne wird zwischen drei primären Gerätetypen unterschieden:
   - *Master Port:* Dient als Zeitquelle für das angeschlossene Netzwerk. Sendet periodisch Synchronisationsnachrichten, um das Nochfolgende Gerät zu Synchronisieren.
   - *Slave Port:* Empängt die Synchronisationsnachrichten der übergeordneten Clock, um die eigene lokale Clock zu Synchronisieren.
 
-- *Time-Aware Endstation:* Endstationen stellen die Endpunkte der Zeitsynchronisationshierarchie dar. Sie empfangen die Zeitinformationen, synchronisieren ihre lokale Uhr darauf, leiten diese jedoch nicht an andere Geräte weiter.
+- *Time-Aware Endstation:* Endstationen stellen die Endpunkte der Zeitsynchronisationshierarchie dar. Sie empfangen die Zeitinformationen, synchronisieren ihre lokale Uhr darauf, leiten diese jedoch nicht an andere Geräte weiter. Ihr Port arbeitet daher immer im Slave-Modus.
 
 === Die Sync-Nachricht
 
 Um das Prinzip der Zeitsynchronisierung zu verstehen, muss zunächst die Funktionsweise einer Clock in digitalen System verstanden werden. Jede CPU besitzt einen internen Taktgeber (Hardware-Oszillator), der als Frequenzquelle dient.
-Ein Hardware-Timer zählt die Schwingungen dieses Oszillators und bildet daraus die lokale Systemzeit ab. Aufgrund von Fertigungstoleranzen, Temparaturschwankungen und Alterungen weisen diese Quarze jedoch eine geringfügige Frequenzabweichung sowie einen Phasenversatz zur Refferenzzeit auf. Ohne eine dauerhafte Korrektur laufen die Uhren im Laufe der Zeit auseinander.
+Eine Clock zählt die Schwingungen dieses Oszillators und bildet daraus die lokale Systemzeit ab. Aufgrund von Fertigungstoleranzen, Temparaturschwankungen und Alterungen weisen diese Quarze jedoch eine geringfügige Frequenzabweichung sowie einen Phasenversatz zur Refferenzzeit auf. Ohne eine dauerhafte Korrektur laufen die Clocks im Laufe der Zeit auseinander.
 
 Der Synchronisationsmechanismus gleicht diesen Versatz aus, indem die lokale Clock periodisch an die Zeitbasis des Masters angepasst wird. Hierbei unterscheidet der Standard zwischen zwei Verfahren: dem *Two-Step*- und dem *Single-Step*-Verfahren, wie in @sync-mechanism dargestellt.
 #figure(
@@ -80,19 +76,19 @@ Bei dem im @sync-mechanism (linke Seite) dargestellten Two-Step-Verfahren erfolg
 
 1. Sync-Nachricht: Der Master sendet eine Sync-Nachricht an den Slave. Dabei werden der Sendezeitpunkt ($t_{s}$) auf Master-Seite und der Empfangszeitpunkt ($t_{r}$) auf Slave-Seite erfasst.
 
-2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt (`preciseOriginTimestamp`), das `correctionField` sowie die `rateRatio`.@ieee8021as2025[11.4]
+2. Follow_Up-Nachricht: Um dem Slave die notwendigen Informationen für die Synchronisation bereitzustellen, sendet der Master anschließend eine Follow_Up-Nachricht. Diese enthält den präzisen Sendezeitpunkt der Sync-Nachricht (`preciseOriginTimestamp`), das `correctionField` sowie die `rateRatio`.@ieee8021as2025[11.4]
 
   - *`preciseOriginTimestamp`:* Der zuvor auf Master-Seite erfasste Sendezeitpunkt $t_s$, ausgedrückt in der Zeitbasis der Grandmaster Clock. Er bildet die eigentliche Referenzzeit, auf die sich alle weiteren Korrekturen beziehen.
 
-  - *`correctionField`:* Ein von der Grandmaster Clock mit dem Wert null initialisierter Korrekturwert, der auf dem Weg zum Slave alle Verzögerungen aufsummiert, die im `preciseOriginTimestamp` noch nicht enthalten sind – insbesondere die gemessene Leitungsverzögerung sowie, sofern die Nachricht über zwischengeschaltete Bridges läuft, deren Verweildauer (residence time). Damit lässt sich der tatsächliche Sendezeitpunkt der Grandmaster Clock trotz dieser Verzögerungen exakt rekonstruieren.
+  - *`correctionField`:* Ein von der Grandmaster Clock mit dem Wert null initialisierter Korrekturwert, der auf dem Weg zum Slave alle Verzögerungen aufsummiert, die im `preciseOriginTimestamp` noch nicht enthalten sind – insbesondere die gemessene Leitungsverzögerung sowie, sofern die Nachricht über zwischengeschaltete Bridges läuft, deren Verweildauer (residence time). Damit lässt sich der tatsächliche Sendezeitpunkt der Grandaster Clock trotz dieser Verzögerungen exakt rekonstruieren.
 
   - *`rateRatio`:* Das Verhältnis der Frequenz der Grandmaster Clock zur Frequenz der lokalen Clock des Slaves. Ausgehend vom Wert eins bei der Grandmaster Clock wird sie über jeden Hop hinweg fortgeschrieben und beschreibt so stets das aktuelle Frequenzverhältnis zur ursprünglichen Zeitquelle (siehe Abschnitt „Die gPTP Bridge"). Neben der Offset-Korrektur erlaubt sie dem Slave dadurch auch, seine lokale Taktrate an die des Masters anzupassen.
 
-Dieser Ablauf kann auch in einem Schritt erfolgen. Dabei werden, wie auf der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen im Sync-Paket übermittelt.
+Dieser Ablauf kann auch in einem Schritt erfolgen. Dabei werden, wie auf der rechten Seite der @sync-mechanism dargestellt, bereits alle nötigen Informationen in der Sync-Nachricht übermittelt.
 
 
 === Messung der Leitungsverzögerung
-Ein weiterer wichtiger Mechanismus ist das berechenen des `propagation Delays`. Hierbei wird ermittelt, wie lange ein Paket auf der physischen Leitung benötigt.
+Ein weiterer wichtiger Mechanismus ist das berechenen des `propagation Delays`. Hierbei wird ermittelt, wie lange ein Frame auf der physischen Leitung benötigt.
 
 #figure(
   image("../assets/Sync/gPTP-pDelay-mechanism.png", width: 80%),
@@ -100,7 +96,7 @@ Ein weiterer wichtiger Mechanismus ist das berechenen des `propagation Delays`. 
 ) <pDelay-mechanism>
 
 Der Mechanismus nutzt drei Arten von Nachrichten:
-Der Initiator sendet zuerst ein `pDelay_Req`. Dabei wird beim Senden der Nachricht der Zeitstempel $t_1$ und beim Empfangen durch den Partner der Zeitstempel $t_2$ aufgenommen. Anschließend sendet der Empfänger das Paket `pDelay_Resp` zurück, wobei die Zeitstempel $t_3$ (Senden) und $t_4$ (Empfangen) erfasst werden. Mit der Nachricht `pDelay_Resp_Follow_Up` wird zuletzt der Zeitstempel t3 an den Initiator übermittelt.
+Der Initiator sendet zuerst eine `pDelay_Req` Nachricht. Dabei wird beim Senden der Nachricht der Zeitstempel $t_1$ und beim Empfangen durch den Partner der Zeitstempel $t_2$ aufgenommen. Anschließend sendet der Empfänger die Nachricht `pDelay_Resp` zurück, wobei die Zeitstempel $t_3$ (Senden) und $t_4$ (Empfangen) erfasst werden. Mit der Nachricht `pDelay_Resp_Follow_Up` wird zuletzt der Zeitstempel t3 an den Initiator übermittelt.
 
 Da der Initiator nun alle vier Zeitstempel besitzt, kann die Berechnung wie folgt durchgeführt werden:
 
