@@ -11,11 +11,34 @@
 #set text(lang: "de", region: "DE")
 
 // Acronyms (first use = long form + abbreviation, afterwards abbreviation only)
-// Examples: replace or extend with your own acronyms.
 #init-acronyms((
   "ECU": ("Steuergerät", "Steuergeräte"),
   "CAN": ("Controller Area Network",),
-  "API": ("Application Programming Interface",),
+  "TSN": ("Time-Sensitive Networking",),
+  "gPTP": ("Generalized Precision Time Protocol",),
+  "NTP": ("Network Time Protocol",),
+  "PTP": ("Precision Time Protocol",),
+  "MAC": ("Media-Access-Control",),
+  "PHY": ("Physical-Layer", "Physical-Layer-Bausteine"),
+  "SFD": ("Start Frame Delimiter",),
+  "RTOS": ("Echtzeitbetriebssystem", "Echtzeitbetriebssysteme"),
+  "BMCA": ("Best Master Clock Algorithm",),
+  "GM": ("Grandmaster Clock",),
+  "ISR": ("Interrupt-Service-Routine", "Interrupt-Service-Routinen"),
+  "PPS": ("Pulse-per-Second",),
+  "GPIO": ("General Purpose Input/Output",),
+  "E2E": ("Ende-zu-Ende",),
+  "P2P": ("Peer-to-Peer",),
+  "CPU": ("Central Processing Unit", "Central Processing Units"),
+  "API": ("Application Programming Interface", "Application Programming Interfaces"),
+  "TLV": ("Type-Length-Value",),
+  "PI": ("Proportional-Integral",),
+  "IP": ("Internet Protocol",),
+  "UDP": ("User Datagram Protocol",),
+  "PLL": ("Phase-Locked Loop", "Phase-Locked Loops"),
+  "SoC": ("System-on-Chip", "Systems-on-Chip"),
+  "ppm": ("parts per million",),
+  "ppb": ("parts per billion",),
 ))
 
 // Short forms only in the list of abbreviations (body text stays with short/short-pl)
