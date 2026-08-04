@@ -22,7 +22,7 @@
   "PHY": ("Physical-Layer", "Physical-Layer-Bausteine"),
   "SFD": ("Start Frame Delimiter",),
   "RTOS": ("Echtzeitbetriebssystem", "Echtzeitbetriebssysteme"),
-  "BMCA": ("Best Master Clock Algorithm",),
+  "BTCA": ("best timeTransmitter clock algorithm",),
   "GM": ("Grandmaster Clock",),
   "ISR": ("Interrupt-Service-Routine", "Interrupt-Service-Routinen"),
   "PPS": ("Pulse-per-Second",),

@@ -1,4 +1,7 @@
-#import "../meta.typ": note, fig-platzhalter-gross, fig-platzhalter-mittel, fig-platzhalter-klein, tab-h, tab-d, acr-emph, acrpl-emph, openright
+#import "../meta.typ": (
+  acr-emph, acrpl-emph, fig-platzhalter-gross, fig-platzhalter-klein, fig-platzhalter-mittel, note, openright, tab-d,
+  tab-h,
+)
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 #[

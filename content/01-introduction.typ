@@ -8,15 +8,15 @@
 // Trichter: Ethernet -> TSN -> gPTP -> Embedded/RTOS -> diese Arbeit
 
 == Motivation
-Mit dem Aufkommen von Industrie 4.0 und dem autonomen Fahren steigen die Anforderungen an die Echtzeitfähigkeit industrieller und automobiler Netzwerke. Standard-Ethernet arbeitet nach dem Best-Effort-Prinzip und kann den dafür nötigen Determinismus nicht gewährleisten. #acr-emph("TSN") adressiert dieses Problem durch eine Reihe von IEEE-Standards, deren Grundbaustein die präzise Zeitsynchronisation mittels IEEE 802.1AS bildet. Dies Prokoll wird auch #acr-emph("gPTP") gennant.
+Mit dem Aufkommen von Industrie 4.0 und dem autonomen Fahren steigen die Anforderungen an die Echtzeitfähigkeit industrieller und automobiler Netzwerke. Standard-Ethernet arbeitet nach dem Best-Effort-Prinzip und kann den dafür nötigen Determinismus nicht gewährleisten@ethernetDefinitiveGuide. #acr-emph("TSN") adressiert dieses Problem durch eine Reihe von IEEE-Standards, deren Grundbaustein die präzise Zeitsynchronisation mittels IEEE 802.1AS bildet. Dieses Protokoll wird in der Praxis auch als #acr-emph("gPTP") bezeichnet.
 
-Gleichzeitig gewinnen ressourcenbeschränkte Embedded-Systeme in diesen Anwendungsbereichen an Bedeutung. Sie sind kostengünstiger und energieeffizienter als herkömmliche Industrierechner. #acr-emph("RTOS") wie Zephyr ermöglichen dabei eine plattformunabhängige Entwicklung mit deterministischem Zeitverhalten.
+Gleichzeitig gewinnen ressourcenbeschränkte Embedded-Systeme in diesen Anwendungsbereichen an Bedeutung. Sie sind kostengünstiger und energieeffizienter als herkömmliche Industrierechner. #acr-emph("RTOS") wie Zephyr ermöglichen dabei eine plattformunabhängige Entwicklung mit deterministischem Zeitverhalten@hohee2021embeddedos.
 
 == Problemstellung
 
 #acr("gPTP") synchronisiert im einfachsten Fall zwei direkt verbundene Geräte. Sobald ein Netzwerk aus mehr als zwei Geräten besteht, müssen Zwischenknoten die Zeitinformationen aktiv weiterleiten – diese Rolle übernehmen Time-Aware Bridges. Um Zephyr effektiv in #acr("TSN")-Netzwerken einzusetzen, muss die Synchronisierung nicht nur zwischen Endknoten funktionieren, sondern auch zuverlässig über mehrere Bridges hinweg erfolgen, um die Zeitinformationen präzise weiterzuleiten.
 
-Aktuell existiert im Quellcode von Zephyr eine Implementierung des IEEE 802.1AS-Protokolls, welche auch das Bridging implementiert, allerdings wurde diese nie in der Praxis validiert.
+Aktuell existiert im Quellcode von Zephyr eine Implementierung des IEEE 802.1AS-Protokolls, welche auch das Bridging implementiert, allerdings wurde diese nie in der Praxis validiert @zephyr_gptp.
 
 Dadurch ist es unklar, ob diese Implementierung auf den verschiedenen Systemen die strikten Genauigkeitsanforderungen des Standards erfüllt.
 
