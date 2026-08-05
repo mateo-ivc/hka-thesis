@@ -1,5 +1,5 @@
 // List of abbreviations and acronym helpers.
-#import "@preview/acrostiche:0.7.0": acr, acrpl, display-def, display-short, mark-acr-used, _acronyms, _acrostiche-index
+#import "@preview/acrostiche:0.7.0": _acronyms, _acrostiche-index, acr, acrpl, display-def, display-short, mark-acr-used
 
 // First mention with italic long form in body text; long form stays upright in the list of abbreviations.
 #let acr-emph(acronym, plural: false) = {
@@ -107,11 +107,7 @@
 
   context {
     let acr-list = if used-only {
-      _acronyms
-        .final()
-        .pairs()
-        .filter(((_, state)) => state.at(2))
-        .map(((acr, _)) => acr)
+      _acronyms.final().pairs().filter(((_, state)) => state.at(2)).map(((acr, _)) => acr)
     } else {
       _acronyms.get().keys()
     }
