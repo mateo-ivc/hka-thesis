@@ -1,4 +1,4 @@
-#import "../meta.typ": acr-cap, acr-emph, fig-platzhalter-mittel, note, req, tab-d, tab-h
+#import "../meta.typ": acr-cap, acr-emph, cap-long-only, fig-platzhalter-mittel, note, req, tab-d, tab-h
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Analyse und Entwurf
@@ -12,29 +12,29 @@ Annex B des Standards definiert eine reihe an Leistungsanforderungen, an denen s
 
 #figure(
   table(
-    columns: (1.5fr, 0.5fr, 1fr),
+    columns: (2fr, 1fr),
     align: (left, left, left),
     stroke: none,
     table.hline(),
-    tab-h[Anforderung], tab-h[Beschreibung], tab-h[Grenzwert],
+    tab-h[Anforderung], tab-h[Grenzwert],
     table.hline(stroke: 0.5pt),
-    tab-h[Residence Time @ieee8021as2025[B.2.2]], tab-h[], tab-h[$<= 10m s$],
-    tab-h[pDelay Turnaround Time @ieee8021as2025[B.2.3]], tab-h[], tab-h[$<= 10m s$],
-    tab-h[#acr-cap("E2E")-Synchronisationsgenauigkeit @ieee8021as2025[B.3]], tab-h[], tab-h[$<=1mu s$],
-    tab-h[Granularität der LocalCLock @ieee8021as2025[B.1.2]], tab-h[], tab-h[$<=40n s$],
-    tab-h[meanLinkDelayThresh @ieee8021as2025[11.2.2]], tab-h[], tab-h[$"   "800n s$],
+    tab-h[Residence Time @ieee8021as2025[B.2.2]], tab-h[$<= 10m s$],
+    tab-h[pDelay Turnaround Time @ieee8021as2025[B.2.3]], tab-h[$<= 10m s$],
+    tab-h[#acr-cap("E2E")-Synchronisationsgenauigkeit @ieee8021as2025[B.3]], tab-h[$<=1mu s$],
+    tab-h[Granularität der LocalCLock @ieee8021as2025[B.1.2]], tab-h[$<=40n s$],
+    tab-h[meanLinkDelayThresh @ieee8021as2025[11.2.2]], tab-h[$"   "800n s$],
     table.hline(),
   ),
-  caption: [gPTP Leistungsanforderungen nach Annex B],
+  caption: [gPTP Leistungsanforderungen#cap-long-only[ @ieee8021as2025[Annex B]]],
 )
 
 Die Residence Time bezeichnet die maximale Zeit, die eine Sync-Nachricht innerhalb einer Time-Aware Bridge vom Eingang bis Ausgang benötigt. Die pDelay Turnaround Time beschreibt wie lange ein System zum Verabeiten der pDelay_Resp-Nachricht brauchen darf. Beide Werte begrenzen wie schnell eine Bridge die zugehörige Berechnung durchführen muss.
 
-Die #acr-emph("E2E")-Synchronisationsgenauigkeit gilt laut @ieee8021as2025[B.3] kumulativ über die gesamte Kette - vorrausgesetzt die Kette ist nicht größer als sieben Hops - und erfordert, dass alle Geräte zu einem gewissen Grad Synchronisiert sind.
+Die #acr-emph("E2E")-Synchronisationsgenauigkeit gilt laut @ieee8021as2025[B.3] kumulativ über die gesamte Kette. Vorrausgesetzt die Kette ist nicht größer als sieben Hops und erfordert, dass alle Geräte zu einem gewissen Grad Synchronisiert sind.
 
-Die Granularität der LocalClock beschreibt die minimal Auflösung mit der die lokale Clock die Zeit erfassen muss, und ist damit Vorraussetzung für die anderen drei Anforderungen: Eine gröbere Granularität würde bereits zu Messungenauigkeiten bei der residence Time und pDelay Messung führen.
+Die Granularität der LocalClock beschreibt die minimal Auflösung mit der die lokale Clock die Zeit erfassen muss, und ist damit Vorraussetzung für die anderen drei Anforderungen. Eine gröbere Granularität würde bereits zu Messungenauigkeiten bei der `residence Time` und `pDelay` Messung führen.
 
-Der meanLinkDelayThresh unterscheidet sich in der Art von den übrigen Anforderungen: Es handelt sich nicht um eine Genauigkeits- oder Timing-Anforderung an die Implementierung, sondern um einen Schwellenwert, gegen den die gemessene mittlere Link Delay (meanLinkDelay) verglichen wird. Überschreitet die gemessene Link Delay diesen Wert, geht der Standard davon aus, dass im Link Equipment ohne #acr("gPTP")-Unterstützung vorhanden ist. Für 100BASE-TX- und 1000BASE-T-Verbindungen (Kupfer) beträgt der Schwellenwert 800 ns;
+Der meanLinkDelayThresh unterscheidet sich in der Art von den übrigen Anforderungen. Es handelt sich nicht um eine Genauigkeits- oder Timing-Anforderung an die Implementierung, sondern um einen Schwellenwert, gegen den der gemessene mittlere Link Delay (meanLinkDelay) verglichen wird. Überschreitet der gemessene Link Delay diesen Wert, geht der Standard davon aus, dass im Link Equipment ohne #acr("gPTP")-Unterstützung vorhanden ist. Für 100BASE-TX- und 1000BASE-T-Verbindungen (Kupfer) beträgt der Schwellenwert 800 ns;
 
 === Hardwareanfoderunge
 
@@ -46,10 +46,10 @@ Neben den normativen Zeitanforderungen ergeben sich aus dem gewählten Testaufba
 
 
 == Testaufbau
-Für den nachfolgenden Testaufbau werden drei phyBOARD-Atlas-Boards als Bridge eingesetzt. Diese verfügen jeweils über zwei Ports, deren Zeitstempel beide im #acr("MAC") erfasst werden (#acr("MAC")-Timestamping). Die beiden Ports unterscheiden sich jedoch in ihrem #acr("PHY"): Der 1GBit/s-Port nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung und liefert damit die Voraussetzung für #acr("SFD")-Timestamping @ti_dp83867e, während der 100/10MBit/s-Port über keine #acr("SFD")-Erkennung verfügt und somit ausschließlich auf das gewöhnliche Interface-Signal angewiesen ist @microchip_ksz8081. Dadurch lässt sich der Einfluss der #acr("SFD")-Erkennung auf die Zeitstempel-Genauigkeit innerhalb desselben Testaufbaus direkt vergleichen.
+Für den nachfolgenden Testaufbau werden drei phyBOARD-Atlas-Boards@phytec_imxrt1170_devkit als Bridge eingesetzt. Diese verfügen jeweils über zwei Ports, deren Zeitstempel beide im #acr("MAC") erfasst werden (siehe 2.3.2). Die beiden Ports unterscheiden sich jedoch in ihrem #acr("PHY"). Der 1GBit/s-Port nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung und liefert damit die Voraussetzung für #acr("SFD")-Timestamping@ti_dp83867e, während der 100/10MBit/s-Port über keine #acr("SFD")-Erkennung verfügt und somit ausschließlich auf das gewöhnliche Interface-Signal angewiesen ist @microchip_ksz8081. Dadurch lässt sich der Einfluss der #acr("SFD")-Erkennung auf die Zeitstempel-Genauigkeit innerhalb desselben Testaufbaus direkt vergleichen.
 //(Muss ich hier erklären, wieso diese Hardware verwendet wird?)
 
-Des Weiteren werden zwei STM32H7-Boards eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungiert. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten. Dies erzwingt allerdings das Abschalten des #acr("BTCA"), um den einzelnen Systemen ihre feste Rolle zuzuweisen.
+Des Weiteren werden zwei STM32H7-Boards@st_nucleo_h755zi_q eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungiert. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten. Dies erzwingt allerdings das Abschalten des #acr("BTCA"), um den einzelnen Systemen ihre feste Rolle zuzuweisen.
 
 
 Da in dieser Arbeit nur die Bridgefunktion validiert werden soll, ist es nicht nötig, die Grandmaster Clock zu einer externen Zeitquelle zu synchronisieren. Daher wird diese Clock im Free-Running-Mode betrieben.
@@ -85,13 +85,14 @@ Liegt die berechnete Standardabweichung $sigma$ innerhalb der geforderten 0,1 #a
 == Messmethodik
 Um die tatsächlich erreichte Synchronisierungsgenauigkeit des Testaufbaus zu überprüfen, reicht eine rein softwareseitige Betrachtung der berechneten Offsets nicht aus, da diese bereits durch den Synchronisierungsalgorithmus korrigiert werden. Zudem würden systematische Messfehler innerhalb eines Controllers auf diese Weise nicht auffallen, da dieselben Fehler sowohl die #acr("PTP")-Synchronisation selbst als auch eine rein softwareseitige Messung ihrer Genauigkeit gleichermaßen verfälschen würden. Stattdessen wird die Synchronisierung über einen unabhängigen Hardware-Trigger am jeweiligen Mikrocontroller nachgewiesen: Die zu vergleichenden Clocks legen jeweils ein #acr("PPS")-Signal auf einen #acr-emph("GPIO")-Pin: Ein Impuls, der immer genau beim Rollover zur nächsten Sekunde ausgelöst wird. Da dieser Impuls direkt aus dem internen Timer der Clock abgeleitet wird, ist er unabhängig vom #acr("gPTP")-Stack. Die zeitliche Differenz zwischen zwei #acr("PPS")-Flanken entspricht dem tatsächlichen Offset zwischen den beiden Clocks und lässt sich extern messen.
 
-Für die Erfassung wird ein Oszilloskop mit vier Kanälen eingesetzt. Einer dieser Kanäle ist in jeder Messung fest der #acr("GM") zugeordnet, da deren Clock die Referenz ist, auf die sich alle übrigen Geräte synchronisieren. Die verbleibenden drei Kanäle werden je nach Messziel unterschiedlich belegt: Zur Validierung einer einzelnen Bridge werden #acr("GM"), Slave-Port und Master-Port derselben Bridge gleichzeitig gemessen. Zur Messung der #acr("PHY")-Latenz-Asymmetrie werden Messung für Messung Bridges zwischen Grandmaster und Endpoint zwischen geschalten. Da hier 4 Messpukte nicht ausreichen wird die Kette in mehreren Läufen mit unterschiedlichen Messpukten durchgemessen.
+Für die Erfassung wird ein Oszilloskop mit vier Kanälen eingesetzt. Einer dieser Kanäle ist in jeder Messung fest der #acr("GM") zugeordnet, da deren Clock die Referenz ist, auf die sich alle übrigen Geräte synchronisieren. Die verbleibenden drei Kanäle werden je nach Messziel unterschiedlich belegt: Zur Validierung einer einzelnen Bridge werden #acr("GM"), Slave-Port und Master-Port derselben Bridge gleichzeitig gemessen. Sobald mehr als eine Bridge im System ist, reichen hier 4 Messpukte nicht mehr aus. Daher wird die Kette in mehreren Läufen mit unterschiedlichen Messpukten durchgemessen.
 
 Die #acr("PPS")-Flanken der belegten Kanäle werden dabei jeweils gleichzeitig über mehrere aufeinanderfolgende #acr("PPS")-Perioden aufgenommen und als Rohdaten exportiert. Ein Auswertungsskript berechnet aus jedem erfassten Flankensatz sowohl den Offset jedes Kanals relativ zum #acr("GM") als auch die Differenz zwischen benachbarten Kanälen (Hop-zu-Hop-Offset) - je nachdem, welche Größe für die jeweilige Messung relevant ist. Für jeden Offset ergibt sich damit eine Zeitreihe über die gesamte Messdauer, die als Diagramm über der Zeit dargestellt wird.
 
 In diesem Diagramm ist ein charakteristischer Verlauf zu erwarten: Direkt nach dem Start bzw. Link-Up ist der Offset zwischen den Clocks zunächst groß, da noch keine Synchronisierung stattgefunden hat. Mit fortschreitender Regelung durch den Synchronisierungsalgorithmus sinkt der Offset über mehrere Sync-Intervalle hinweg, bis er in einen stabilen Zustand übergeht - dieser Einschwingvorgang macht die Regelung des Synchronisierungsalgorithmus sichtbar. Der Offset läuft dabei nicht exakt gegen null, sondern pendelt im eingeschwungenen Zustand innerhalb eines kleinen Reststreubands, dessen Größe durch die in Abschnitt "Zeitliche Anforderungen" festgelegten Genauigkeitsanforderungen begrenzt sein muss, damit der Testaufbau als konform gilt.
 
-
+//todo: Beispiel Diagramm einfügen und erklären, was passier.
+//todo: Statistische Anlyse, was wie wo warum
 == Ungenauigkeiten
 Der pDelay-Machanismus aus @pDelay-mechanism setzt voraus, dass die Singallaufzeit zwischen zwei Ports in beide Richtungen symmetrisch ist @ieee8021as2025[11.2]. Nur unter dieser Annahme lässt sich aus der Summe $t_4 - t_1$ und $t_3 - t_2$ ein einseitiger meanLinkDelay berechnen. Der vorliegende Testaufbau verletzt jedoch diese Annahme. Wie im Kaptiel Timestamping beschrieben verfügt der 1Gbit #acr("PHY") über eine #acr("SFD")-Erkennung. Die beiden 10/100Mbit #acrpl("PHY") besitzten diese Funktion jedoch nicht. Alles was in einem Ethernet-Frame vor dem #acr("SFD") steht liegt dadurch innerhalb des Zeitstempels. Zusätzlich ist diese interne Verarbeitungszeit zwischen Sende- und Empfangsrichtung nicht notwendigerweise gleich groß, wodurch die Symmetrieannahme des pDelay-Machanismus zusätzlich verletzt wird. Diese Asymmetrie erkärt, warum an Hops mit einem 10/100Mbit #acr("PHY") ein deutlich höherer meanLinkDelay gemessen wird.
 

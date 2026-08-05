@@ -39,6 +39,7 @@
   "SoC": ("System-on-Chip", "Systems-on-Chip"),
   "ppm": ("parts per million",),
   "ppb": ("parts per billion",),
+  "IEEE": ("Institute of Electrical and Electronics Engineers",),
 ))
 
 // Short forms only in the list of abbreviations (body text stays with short/short-pl)
@@ -102,25 +103,27 @@
   ..outrageous.presets.outrageous-figures,
 )
 
-#text(size: 21pt)[*Abbildungsverzeichnis*]
-#v(0pt)
+#short-captions[
+  #text(size: 21pt)[*Abbildungsverzeichnis*]
+  #v(0pt)
 
-#outline(title: "", target: figure.where(kind: image))
+  #outline(title: "", target: figure.where(kind: image))
 
-#v(40pt)
+  #v(40pt)
 
-// List of tables and listings
-#text(size: 21pt)[*Tabellenverzeichnis*]
-#v(0pt)
+  // List of tables and listings
+  #text(size: 21pt)[*Tabellenverzeichnis*]
+  #v(0pt)
 
-#outline(title: "", target: figure.where(kind: table))
+  #outline(title: "", target: figure.where(kind: table))
 
-#v(40pt)
+  #v(40pt)
 
-#text(size: 21pt)[*Listingverzeichnis*]
-#v(0pt)
+  #text(size: 21pt)[*Quellcodeverzeichnis*]
+  #v(0pt)
 
-#outline(title: "", target: figure.where(kind: raw))
+  #outline(title: "", target: figure.where(kind: raw))
+]
 
 #openright()
 
@@ -203,6 +206,9 @@
   ]
   #c.separator#c.body
 ]
+
+// Numbered equations, referenceable via a label, e.g. @my-equation
+#set math.equation(numbering: "(1)")
 
 #set heading(numbering: "1.1")
 #show heading: it => [

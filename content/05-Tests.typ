@@ -14,3 +14,7 @@
   -
 
 - Auseinanderlaufen von Clocks zeigen durch Zeitsynchronisierung (keine Syntonisierung)
+
+== Basis PPS-Messung
+
+
