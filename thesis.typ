@@ -35,11 +35,18 @@
   "PI": ("Proportional-Integral",),
   "IP": ("Internet Protocol",),
   "UDP": ("User Datagram Protocol",),
+  "TCP": ("Transmission Control Protocol",),
+  "AVB": ("Audio Video Bridging",),
+  "VLAN": ("Virtual Local Area Network", "Virtual Local Area Networks"),
   "PLL": ("Phase-Locked Loop", "Phase-Locked Loops"),
   "SoC": ("System-on-Chip", "Systems-on-Chip"),
   "ppm": ("parts per million",),
   "ppb": ("parts per billion",),
   "IEEE": ("Institute of Electrical and Electronics Engineers",),
+  "DMA": ("Direct Memory Access",),
+  "RX": ("Receive",),
+  "TX": ("Transmit",),
+  "SDRAM": ("Synchronous Dynamic Random-Access Memory",),
 ))
 
 // Short forms only in the list of abbreviations (body text stays with short/short-pl)

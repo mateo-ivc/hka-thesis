@@ -122,17 +122,19 @@ Sobald mehr als eine Bridge im System ist, reichen die vier Messpunkte des Oszil
 ]
 
 === Statistische Auswertung
-Aus jeder Zeitreihe werden für das Kapitel Evaluation die folgenden Kennzahlen abgeleitet. Sie bilden die gemeinsame Grundlage, gegen die dort alle Messreihen ausgewertet werden:
+Aus jeder Zeitreihe wird für das Kapitel Evaluation zweierlei abgeleitet: der eigentliche Nachweis, dass die jeweilige Anforderung eingehalten wird, sowie eine Charakterisierung des eingeschwungenen Zustands, auf die dort bei der Diskussion der in @Ungenauigkeiten benannten Fehlerquellen zurückgegriffen wird.
 
-- *Einschwingzeit $t_"set"$:* der früheste Zeitpunkt, ab dem der Offset das durch die jeweilige Anforderung vorgegebene Toleranzband nicht mehr verlässt und darin bis zum Ende der Messung verbleibt. Eine einzelne, kurzzeitige Unterschreitung des Toleranzbands zählt nicht als Einschwingen, da sie nur zufällig getroffen sein kann. Erst ab $t_"set"$ gilt die Synchronisierung als eingeschwungen. Alle folgenden Kennzahlen werden ausschließlich auf den Proben nach $t_"set"$ berechnet, damit der Einschwingvorgang selbst deren Mittelwert und Streuung nicht verfälscht.
-//todo: ist die einschwingzeit ein relevante messung ?
-- *Mittelwert $mu$ und Standardabweichung $sigma$:* berechnet nach:
-  $
-    sigma = sqrt((sum_(i=1)^n) (x_i - mu)^2 dot p_i)
-  $ <standardabweichung-calc>
-  (vgl. Abschnitt "Interne Bridge Synchronisierung"). $mu$ zeigt einen verbleibenden systematischen Versatz an, etwa durch die in @Ungenauigkeiten diskutierte #acr-emph("PHY")-Asymmetrie, während $sigma$ das Rauschen bzw. den Jitter der Synchronisierung im eingeschwungenen Zustand quantifiziert. Beide Werte dienen dabei nicht selbst als Konformitätskriterium, sondern helfen, ein auffälliges Messergebnis einer der in @Ungenauigkeiten benannten Fehlerquellen zuzuordnen.
+*Konformitätsnachweis*\
+Die Anforderung gilt als erfüllt, sobald eine Einschwingzeit $t_"set"$ existiert: der früheste Zeitpunkt, ab dem der Offset das durch die jeweilige Anforderung vorgegebene Toleranzband nicht mehr verlässt und darin bis zum Ende der Messung verbleibt. Eine einzelne, kurzzeitige Unterschreitung des Toleranzbands zählt nicht als Einschwingen, da sie nur zufällig getroffen sein kann. Existiert kein solcher Zeitpunkt, verlässt der Offset das Toleranzband also dauerhaft oder wiederholt bis zum Ende der Messung, gilt die Anforderung als nicht erfüllt. $t_"set"$ ist damit selbst bereits der Nachweis und keine weitere Kennzahl. Zugleich legt $t_"set"$ das gültige Stichprobenfenster für die folgende Charakterisierung fest: Alle weiteren Größen werden ausschließlich auf den Proben nach $t_"set"$ berechnet, damit der Einschwingvorgang selbst deren Mittelwert und Streuung nicht verfälscht.
 
-- *Histogramm:* die Verteilung der Offset-Proben nach $t_"set"$, dargestellt als Histogramm. Es dient zum einen der Plausibilisierung von $sigma$, da dessen übliche Interpretation eine näherungsweise normalverteilte Störung voraussetzt, zum anderen dem Erkennen systematischer Effekte: Eine schiefe oder mehrgipflige Verteilung deutet auf eine zusätzliche, nicht rein stochastische Fehlerquelle hin, etwa eine Asymmetrie im Signalpfad@nguyen2020fuzzypi.
+*Diagnostische Charakterisierung*\
+Über das gültige Stichprobenfenster hinweg werden zusätzlich Mittelwert $mu$ und Standardabweichung $sigma$ der Offset-Proben $x_i$ berechnet:
+$
+  sigma = sqrt(1/n sum_(i=1)^n (x_i - mu)^2)
+$ <standardabweichung-calc>
+$mu$ zeigt einen verbleibenden systematischen Versatz an, etwa durch die in @Ungenauigkeiten diskutierte #acr-emph("PHY")-Asymmetrie, während $sigma$ das Rauschen bzw. den Jitter der Synchronisierung im eingeschwungenen Zustand quantifiziert. Beide Werte sind kein zusätzliches Konformitätskriterium – das leistet bereits $t_"set"$ – sondern helfen, ein auffälliges Messergebnis einer der in @Ungenauigkeiten benannten Fehlerquellen zuzuordnen.
+
+Ergänzend wird die Verteilung der Offset-Proben nach $t_"set"$ als Histogramm dargestellt. Es dient zum einen der Plausibilisierung von $sigma$, da dessen übliche Interpretation eine näherungsweise normalverteilte Störung voraussetzt, zum anderen dem Erkennen systematischer Effekte: Eine schiefe oder mehrgipflige Verteilung deutet auf eine zusätzliche, nicht rein stochastische Fehlerquelle hin, etwa eine Asymmetrie im Signalpfad@nguyen2020fuzzypi.
 
 Die Messdauer je Lauf muss zwei Bedingungen gleichzeitig erfüllen: Sie muss lang genug sein, um den vollständigen Einschwingvorgang zu erfassen, und nach $t_"set"$ genügend Proben liefern, damit $mu$, $sigma$ sowie das Histogramm nicht mehr nennenswert vom Stichprobenumfang abhängen. In der Praxis wird dies mit den ohnehin für die Langzeitstabilität vorgesehenen, mehrstündigen Aufzeichnungen (siehe Kapitel Tests) abgedeckt; für Läufe, die gezielt einzelne Bridges oder Kanalkombinationen validieren, wird die Messdauer so gewählt, dass nach dem Einschwingen mehrere hundert #acr("PPS")-Perioden für die Statistik zur Verfügung stehen.
 //todo: Messdauer z.B. mehrere Stunden, dabei werden intervallmäßig aufnahmen von 1000 Segemnte (16.6 Min)erstellt. Oszi erlaubt nicht mehr. -> 2 Messungen Pro Stunde, Am anfang der stunde und in der Mitte.
