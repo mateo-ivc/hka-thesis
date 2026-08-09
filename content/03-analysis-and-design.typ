@@ -40,21 +40,17 @@ Der meanLinkDelayThresh unterscheidet sich in der Art von den übrigen Anforderu
 
 Neben den normativen Zeitanforderungen ergeben sich aus dem gewählten Testaufbau weitere Anforderungen an die eingesetzte Hardware:
 
-- Hardware-Timestamping: Zeitstempel für ein- und ausgehende #acr("gPTP")-Nachrichten müssen auf #acr("MAC")-Ebene erzeugt werden (Begründung folgt in Abschnitt "MAC Timestamping").
+- Hardware-Timestamping: Zeitstempel für ein- und ausgehende #acr("gPTP")-Nachrichten müssen mindestens auf #acr("MAC")-Ebene erzeugt werden (siehe @hardware-timestamping).
 - Mindestens zwei Ports: Jede Time-Aware Bridge muss Nachrichten an einem Port empfangen und über einen weiteren weiterleiten können.
 - Clock-Qualität: Offset und Jitter der Oszillatoren müssen die Einhaltung von #acr("E2E")-Synchronisationsgenauigkeit über die gesamte Messdauer zulassen.
 
 
-== Testaufbau
-Für den nachfolgenden Testaufbau werden drei phyBOARD-Atlas-Boards@phytec_imxrt1170_devkit als Bridge eingesetzt. Diese verfügen jeweils über zwei Ports, deren Zeitstempel beide im #acr("MAC") erfasst werden (siehe 2.3.2). Die beiden Ports unterscheiden sich jedoch in ihrem #acr("PHY"). Der 1GBit/s-Port nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung und liefert damit die Voraussetzung für #acr("SFD")-Timestamping@ti_dp83867e, während der 100/10MBit/s-Port über keine #acr("SFD")-Erkennung verfügt und somit ausschließlich auf das gewöhnliche Interface-Signal angewiesen ist @microchip_ksz8081. Dadurch lässt sich der Einfluss der #acr("SFD")-Erkennung auf die Zeitstempel-Genauigkeit innerhalb desselben Testaufbaus direkt vergleichen.
-//(Muss ich hier erklären, wieso diese Hardware verwendet wird?)
+== Grundleger Testaufbau
+Für die nachfolgenden Tests werden drei phyBOARD-Atlas-Boards@phytec_imxrt1170_devkit als Bridge eingesetzt. Jedes Board verfügt über zwei Ethernet-Ports mit unterschiedlichem #acr("PHY"): Der 1GBit/s-Port nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung @ti_dp83867e, der 100/10MBit/s-Port hingegen einen #acr("PHY") ohne #acr("SFD")-Erkennung @microchip_ksz8081. Des Weiteren werden zwei STM32H7-Boards@st_nucleo_h755zi_q eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungieren soll. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten, was jedoch das Abschalten des #acr("BTCA") erzwingt, um den einzelnen Systemen ihre feste Rolle zuzuweisen.
 
-Des Weiteren werden zwei STM32H7-Boards@st_nucleo_h755zi_q eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungiert. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten. Dies erzwingt allerdings das Abschalten des #acr("BTCA"), um den einzelnen Systemen ihre feste Rolle zuzuweisen.
+Die beiden Ports des phyBOARD-Atlas weisen bei den in @mac-layer und @cbs behandelten #acr("CBS")-Mechanismen Unterschiede auf: Während die #acr("MAC")-Peripherie des 1GBit/s-Ports (`enet1g`) einen Credit Based Shaper unterstützt @zephyr_eth_nxp_enet_source, fehlen den 100/10MBit/s-Port beider Geräte eine entsprechende Hardware-Warteschlange. Dies bedeutet, dass zwar alle Schnittstellen, beider Geräte, die Zeitsynchronisierung unterstützen, jedoch nur der enet1g-Port des phyBOARD-Atlas über geeignete Hardware für #acr("TSN")-Support im weiteren Sinne verfügt.
 
-
-Da in dieser Arbeit nur die Bridgefunktion validiert werden soll, ist es nicht nötig, die Grandmaster Clock zu einer externen Zeitquelle zu synchronisieren. Daher wird diese Clock im Free-Running-Mode betrieben.
-
-pDelay und Sync-Nachrichten werden nach den Standard werten auf jeweils 1Hz für pDelay und 8Hz für Sync gesendet.
+Da in dieser Arbeit ausschließlich die Bridgefunktion validiert werden soll, muss die als Grandmaster Clock eingesetzte Hardware selbst keine Anbindung an eine externe Referenzzeit besitzen und wird stattdessen im Free-Running-Mode betrieben. Alle übrigen Geräte synchronisieren sich wie in @tsn-intro beschrieben ausschließlich auf diese lokale Zeitbasis. Die dafür nötigen #acr("gPTP")-Nachrichten werden dabei nach den Standardwerten mit 1Hz für pDelay und 8Hz für Sync versendet.
 
 == Interne Bridge Synchronisierung
 

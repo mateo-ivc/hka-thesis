@@ -10,6 +10,14 @@
   number      = {IEEE Std 802.1AS-2025},
 }
 
+@techreport{ieee8021qav2009,
+  author      = {{IEEE}},
+  title       = {{IEEE} Standard for Local and Metropolitan Area Networks--Virtual Bridged Local Area Networks Amendment 12: Forwarding and Queuing Enhancements for Time-Sensitive Streams},
+  institution = {IEEE},
+  year        = {2009},
+  number      = {IEEE Std 802.1Qav-2009},
+}
+
 @techreport{ti_snla242,
   author      = {{Texas Instruments}},
   title       = {How to Configure {DP83867} {SFD}s},
@@ -116,6 +124,43 @@
   title   = {{net\_if.c} -- {TX} timestamp thread ({net\_tx\_ts\_thread})},
   url     = {https://github.com/zephyrproject-rtos/zephyr/blob/main/subsys/net/ip/net_if.c},
   urldate = {2026-08-04},
+}
+
+@online{zephyr_eth_nxp_enet_source,
+  author  = {{Zephyr Project}},
+  title   = {{eth\_nxp\_enet.c} -- {NXP} {ENET} Ethernet driver ({RX}/{TX} staging via net\_pkt\_write/net\_pkt\_read)},
+  url     = {https://github.com/zephyrproject-rtos/zephyr/blob/main/drivers/ethernet/eth_nxp_enet.c},
+  urldate = {2026-08-09},
+}
+
+@online{zephyr_threads,
+  author  = {{Zephyr Project}},
+  title   = {Threads},
+  url     = {https://docs.zephyrproject.org/latest/kernel/services/threads/index.html},
+  urldate = {2026-08-09},
+}
+
+@online{zephyr_drivers,
+  author  = {{Zephyr Project}},
+  title   = {Device Driver Model},
+  url     = {https://docs.zephyrproject.org/latest/kernel/drivers/index.html},
+  urldate = {2026-08-09},
+}
+
+@online{zephyr_net_stack_architecture,
+  author  = {{Zephyr Project}},
+  title   = {Network Stack Architecture},
+  url     = {https://docs.zephyrproject.org/latest/services/connectivity/networking/net-stack-architecture.html},
+  urldate = {2026-08-09},
+}
+
+%todo: Quelle fuer ISO/OSI-Modell pruefen/vervollstaendigen
+@techreport{iso7498-1,
+  author      = {{ISO/IEC}},
+  title       = {Information technology -- Open Systems Interconnection -- Basic Reference Model: The Basic Model},
+  institution = {ISO/IEC},
+  year        = {1994},
+  number      = {ISO/IEC 7498-1:1994},
 }
 
 @article{zhang2024tsn,

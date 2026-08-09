@@ -14,6 +14,8 @@
 #init-acronyms((
   "ECU": ("Steuergerät", "Steuergeräte"),
   "CAN": ("Controller Area Network",),
+  "OSI": ("Open Systems Interconnection",),
+  "LLC": ("Logical Link Control",),
   "TSN": ("Time-Sensitive Networking",),
   "gPTP": ("Generalized Precision Time Protocol",),
   "NTP": ("Network Time Protocol",),
@@ -37,6 +39,7 @@
   "UDP": ("User Datagram Protocol",),
   "TCP": ("Transmission Control Protocol",),
   "AVB": ("Audio Video Bridging",),
+  "CBS": ("Credit Based Shaper",),
   "VLAN": ("Virtual Local Area Network", "Virtual Local Area Networks"),
   "PLL": ("Phase-Locked Loop", "Phase-Locked Loops"),
   "SoC": ("System-on-Chip", "Systems-on-Chip"),
