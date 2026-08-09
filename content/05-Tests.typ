@@ -21,6 +21,7 @@
 
 === Ziel
 Das eigentliche Versprechen einer Time-Aware Bridge im Sinne von #acr("TSN") besteht nicht nur darin, unter Idealbedingungen synchron zu bleiben, sondern insbesondere auch dann, wenn dieselbe physische Verbindung gleichzeitig von Best-Effort-Nutzverkehr belegt wird. Die bisherigen Messungen fanden ausschließlich in einem ansonsten unbelasteten Netz statt.
+#note[Quelle fehlt]
 
 Dieser Test verfolgt daher zwei Ziele. Zum einen soll er zeigen, ob die #acr-emph("gPTP")-Synchronisation der Bridge auch dann innerhalb der nach @tab-zeitanforderungen geforderten Grenzen bleibt, wenn ihr Port gleichzeitig mit einer möglichst hohen Datenmenge belastet wird. Zum anderen soll er nachweisen, dass dies keine Eigenschaft des unveränderten Netzwerkstacks ist, sondern erst durch die in @impl-lastschutz beschriebenen Maßnahmen erreicht wird. Der Test wird deshalb als Vorher-Nachher-Vergleich mit identischem Lastprofil und identischem Messaufbau durchgeführt.
 
@@ -29,21 +30,20 @@ Anstelle der vollständigen Kette (Grandmaster $<->$ Bridge 1 $<->$ Bridge 2 $<-
 
 Als Lastgenerator kommt `zperf` zum Einsatz, ein in Zephyr eingebautes, shellgesteuertes Werkzeug zur Messung des Netzwerkdurchsatzes @zephyr_zperf. Der Grandmaster sendet dabei per #acr-emph("UDP") eine konstante Datenrate an einen auf Bridge 1 laufenden `zperf`-Server - über denselben physischen Port, über den auch die #acr("gPTP")-Nachrichten laufen. #acr-emph("UDP") wurde hier bewusst gegenüber #acr("TCP") bevorzugt, da dessen Congestion Control die tatsächlich angebotene Last variabel und damit für die Messung schwerer kontrollierbar macht. `zperf` erlaubt es stattdessen, eine feste Ziel-Bitrate vorzugeben und den tatsächlich erreichten Durchsatz sowie den Paketverlust getrennt auf Sender- und Empfängerseite auszuwerten.
 
-Zeitgleich läuft an drei #acr-emph("PPS")-Messpunkten - Bridge 1 (Slave-Port, GM-seitig), Bridge 1 (Master-Port, Endpoint-seitig) und Endpoint - die in Kapitel "Analyse und Entwurf" beschriebene Oszilloskop-Messung gegen den #acr("GM") als Referenz mit. Zusätzlich protokolliert Bridge 1 sekündlich die am belasteten Port tatsächlich empfangene Datenrate sowie den Anteil verworfener Rahmen, getrennt nach Nutzlast und #acr("gPTP")-Verkehr, sodass sich der Synchronisationsverlauf direkt der jeweils anliegenden Last gegenüberstellen lässt.
+Zeitgleich läuft eine #acr-emph("PPS")Messung, an GM, Bridge (Slave und Master-Port) und Endpoint. Zusätzlich protokolliert Bridge 1 sekündlich die am belasteten Port tatsächlich empfangene Datenrate sowie den Anteil verworfener Rahmen, getrennt nach Nutzlast und #acr("gPTP")-Verkehr, sodass sich der Synchronisationsverlauf direkt der jeweils anliegenden Last gegenüberstellen lässt.
 
 === Untersuchte Konfigurationen
 Verglichen werden zwei Softwarestände derselben Bridge, die sich ausschließlich in den Maßnahmen aus @tab-lastschutz-massnahmen unterscheiden:
 
 *Konfiguration A (Ausgangszustand)* verwendet den unveränderten ENET-Treiber und mit dem Änderungen aus @bridge-sync-impl und @anpassungen-in-zephyr. #acr("gPTP")-Nachrichten sind nicht als eigene Verkehrsklasse gekennzeichnet, teilen sich den Best-Effort-Sende-Ring mit der Nutzlast und werden aus demselben globalen Empfangs-Pufferpool bedient.
 
-*Konfiguration B* aktiviert sämtliche Maßnahmen aus @tab-lastschutz-massnahmen: VLAN-Kennzeichnung der #acr("gPTP")-Nachrichten, den kreditgeformten Sende-Ring, die verschränkte Bedienung beider Empfangs-Ringe, die eigene Empfangs-Verkehrsklasse sowie den reservierten Empfangs-Pufferpool.
+*Konfiguration B* aktiviert sämtliche Maßnahmen aus @tab-lastschutz-massnahmen: VLAN-Kennzeichnung der #acr("gPTP")-Nachrichten, den  #acr("CBS"), die verschränkte Bedienung beider Empfangs-Ringe, die eigene Empfangs-Verkehrsklasse sowie den reservierten Empfangs-Pufferpool. Alle übrigen Einstellungen sind in beiden Konfigurationen identisch.
 
-Alle übrigen Einstellungen sind in beiden Konfigurationen identisch. Beide laufen mit vier Sende- und Empfangs-Verkehrsklassen (`CONFIG_NET_TC_TX_COUNT`/`_RX_COUNT` $=4$), die Rahmen anhand des in IEEE 802.1Q definierten Priority-Code-Points eigenen Warteschlangen zuordnen @zephyr_net_l2, und mit auf das jeweilige Maximum angehobenen Puffern: `CONFIG_NET_PKT_RX_COUNT`/`_TX_COUNT` $=1024$, `CONFIG_NET_BUF_RX_COUNT`/`_TX_COUNT` $=4096$ sowie die vom NXP-ENET-Treiber separat verwalteten #acr-emph("DMA")-Deskriptorringe `CONFIG_ETH_NXP_ENET_RX_BUFFERS`/`_TX_BUFFERS` $=16$.
-
-Hervorzuheben ist dabei, dass diese Verkehrsklassen in Konfiguration A auf der Empfangsseite trotz Konfiguration wirkungslos bleiben: Wie in @impl-lastschutz beschrieben, weist der unveränderte Treiber eingehenden Rahmen keine Priorität zu, sodass #acr("gPTP")-Nachrichten und Nutzlast unabhängig von dieser Einstellung in derselben Warteschlange landen. Die Trennung der Verkehrsklassen greift erst in Konfiguration B.
+Hervorzuheben ist dabei, dass diese Verkehrsklassen in Konfiguration A auf der Empfangsseite trotz Konfiguration wirkungslos bleiben. Wie in @impl-lastschutz beschrieben, weist der unveränderte Treiber eingehenden Rahmen keine Priorität zu, sodass #acr("gPTP")-Nachrichten und Nutzlast unabhängig von dieser Einstellung in derselben Warteschlange landen. Die Trennung der Verkehrsklassen greift erst in Konfiguration B.
 
 === Ergebnisse in Konfiguration A bei geringer Last
 Ein erster Lauf in Konfiguration A wurde mit einer konstanten Last von $15"Mbit/s"$ und $1"KB"$ großen Paketen über $960"s"$ durchgeführt (`zperf udp upload -a 10.0.1.2 5001 30 1K 15M`). @tab-netzwerklast-durchsatz fasst die auf Bridge 1 gemessene Durchsatz- und Verlustkennzahl zusammen. Die von Grandmaster und Bridge 1 unabhängig protokollierten Werte stimmen dabei überein.
+#note[Versuchsaufbau an Konfiguration B angleichen]
 
 #figure(
   table(
@@ -128,9 +128,6 @@ Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde
 ]
 
 === Vergleich und Einordnung
-#note[
-  Diesen Abschnitt nach Vorliegen des Laufs aus Konfiguration A schärfen; die folgende Argumentation ist bereits darauf ausgelegt, benötigt aber die konkreten Zahlen.
-]
 
 Der Vergleich beider Konfigurationen trennt zwei Aussagen, die sich aus einem einzelnen Lauf nicht trennen ließen. Zum einen bleibt die Zeitsynchronisation in Konfiguration B innerhalb der normativen Anforderung, obwohl der Best-Effort-Durchsatz auf demselben Port bereits massiv eingeschränkt ist - genau das ist das Kernversprechen von #acr("TSN"): Nicht die Leitung wird ausgelastet, sondern die zeitkritische Verkehrsklasse wird gegenüber der unkritischen bevorzugt, und die Degradation trifft ausschließlich Letztere. Zum anderen zeigt Konfiguration A, dass dies keine Eigenschaft des unveränderten Stacks ist.
 

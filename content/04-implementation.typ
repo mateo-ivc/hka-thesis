@@ -132,23 +132,23 @@ Aus dem Phasenfehler berechnet der Regler eine Korrektur in #acr-emph("ppb"), mi
 
 
 == Priorisierung der gPTP-Nachrichten unter Netzwerklast <impl-lastschutz>
-Die bisher beschriebenen Änderungen stellen sicher, dass die Synchronisierung in einem ansonsten unbelasteten Netz zuverlässig arbeitet. Sobald über denselben physischen Port zusätzlich Best-Effort-Nutzverkehr läuft, konkurriert dieser jedoch mit den #acr("gPTP")-Nachrichten um dieselben Ressourcen - und da eine Sync-Nachricht ihren Wert verliert, sobald sie verzögert oder verworfen wird, entscheidet sich genau hier, ob die Bridge die in @tab-zeitanforderungen geforderte Genauigkeit auch unter Last hält.
+Die bisher beschriebenen Änderungen stellen sicher, dass die Synchronisierung in einem ansonsten unbelasteten Netz zuverlässig arbeitet. Sobald über denselben physischen Port zusätzlich Best-Effort-Nutzverkehr läuft, konkurriert dieser jedoch mit den #acr("gPTP")-Nachrichten um dieselben Ressourcen. Problematisch ist dabei weniger der Zeitstempel selbst, der auch bei einer verspäteten Nachricht korrekt bliebe, sondern dass die beteiligten Zustandsmaschinen nur ein enges Zeitfenster für dessen Eintreffen vorsehen. Wird dieses Fenster durch die Last überschritten, behandelt die Implementierung die Nachricht als verloren und verwirft sie. Genau hier entscheidet sich, ob die Bridge die in @tab-zeitanforderungen geforderte Genauigkeit auch unter Last hält.
 
-Der in @cbs beschriebene #acr("CBS") ist der dafür vorgesehene Mechanismus, und die #acr("MAC")-Peripherie der Gigabit-Instanz (`enet1g`) des eingesetzten #acr-emph("SoC") bringt ihn in Hardware mit; die von NXP bereitgestellte HAL macht ihn über `ENET_AVBConfigure()` zugänglich. Zephyrs ENET-Treiber nutzt diese Funktion allerdings nicht: Er betreibt für jede ENET-Instanz ausschließlich den Best-Effort-Ring 0, sodass sämtlicher Verkehr - #acr("gPTP") wie Nutzlast - denselben Sende-Ring teilt. Die Anbindung des Shapers musste daher im Treiber selbst ergänzt werden.
+Der in @cbs beschriebene #acr("CBS") ist der dafür vorgesehene Mechanismus. Die von NXP bereitgestellte HAL macht ihn über `ENET_AVBConfigure()` zugänglich. Zephyrs ENET-Treiber nutzt diese Funktion allerdings nicht. Dieser betreibt für jede ENET-Instanz ausschließlich den Best-Effort-Ring 0, sodass sämtlicher Verkehr, #acr("gPTP") wie Nutzlast denselben Ring teilt. Die Anbindung des Shapers musste daher im Treiber selbst ergänzt werden.
 
-Der Shaper allein genügt jedoch nicht. Er reserviert ausschließlich #emph[Sende]bandbreite; die Last trifft die Bridge in diesem Aufbau aber überwiegend am Eingang, und dort entscheiden zwei weitere, rein softwareseitige Engpässe darüber, ob ein #acr("gPTP")-Frame überhaupt bis zum #acr("gPTP")-Stack gelangt: in welche Empfangs-Warteschlange es eingereiht wird und ob im Moment seines Eintreffens noch ein Netzwerkpuffer frei ist. Die folgenden Unterabschnitte beschreiben deshalb drei aufeinander aufbauende Ebenen: die Kennzeichnung der #acr("gPTP")-Nachrichten als eigene Verkehrsklasse, deren Bevorzugung auf dem Sendepfad durch den #acr("CBS") und deren Absicherung auf dem Empfangspfad.
+Der Shaper allein genügt jedoch nicht. Er reserviert ausschließlich die Sendebandbreite. Die Last trifft die Bridge in diesem Aufbau aber überwiegend am Eingang, also im Empfangspfad. Dort entscheidet vor allem eines, ob ein #acr("gPTP")-Frame überhaupt bis zum #acr("gPTP")-Stack gelangt. Ist im Moment seines Eintreffens noch Platz im Netzwerkpuffer? Die folgenden Unterabschnitte beschreiben deshalb drei aufeinander aufbauende Ebenen. Die Kennzeichnung der #acr("gPTP")-Nachrichten als eigene Verkehrsklasse, deren Bevorzugung auf dem Sendepfad durch den #acr("CBS") und deren Absicherung auf dem Empfangspfad.
 
 === Kennzeichnung der gPTP-Nachrichten
-Voraussetzung für jede Priorisierung ist, dass ein Frame überhaupt als zeitkritisch erkennbar ist. Wie in @cbs beschrieben, entscheidet dies der 3 Bit breite Priority-Code-Point im VLAN-Tag. Zephyrs #acr("gPTP")-Subsystem versendet seine Nachrichten jedoch grundsätzlich ungetaggt, sodass sie sich für die #acr("MAC")-Schicht in nichts von Best-Effort-Verkehr unterscheiden.
+Voraussetzung für jede Priorisierung ist, dass ein Frame überhaupt als zeitkritisch erkennbar ist. Wie in @cbs beschrieben, entscheidet dies der 3 Bit breite Priority-Code-Point im VLAN-Tag. Zephyrs #acr("gPTP")-Subsystem versendet seine Nachrichten jedoch grundsätzlich ungetaggt, was sie für die #acr("MAC")-Schicht ununterschiedbar von den Best-Effort-Verkehr macht.
 
-Ergänzt wurden daher die beiden Optionen `CONFIG_NET_GPTP_VLAN_TAG` und `CONFIG_NET_GPTP_VLAN_PRIORITY`. Ist ein VLAN-Tag konfiguriert, aktiviert `gptp_add_port()` das #acr("VLAN") auf jedem als Port registrierten Interface, und `setup_gptp_frame()` versieht alle ausgehenden #acr("gPTP")-Nachrichten - Sync, Follow-Up, Announce sowie sämtliche Pdelay-Nachrichten - mit diesem Tag und dem konfigurierten Priority-Code-Point (im Testaufbau der höchste Wert 7). Der übrige Verkehr auf demselben physischen Interface bleibt davon unberührt und weiterhin ungetaggt.
+In der KConfig wurden daher die beiden Optionen `CONFIG_NET_GPTP_VLAN_TAG` und `CONFIG_NET_GPTP_VLAN_PRIORITY` ergänzt. Ist ein VLAN-Tag konfiguriert, aktiviert `gptp_add_port()` das #acr("VLAN") auf jedem als Port registrierten Interface. `setup_gptp_frame()` versieht alle ausgehenden #acr("gPTP")-Nachrichten mit diesem Tag und dem konfigurierten Priority-Code-Point (im Testaufbau der höchste Wert 7). Der übrige Verkehr auf demselben physischen Interface bleibt davon unberührt und weiterhin ungetaggt.
 
-Das Tagging deckte dabei eine Klasse von Fehlern im Netzwerkstack auf, die ohne #acr("VLAN") nicht auftreten kann: Die #acr("VLAN")-Verarbeitung schreibt das dem Paket zugeordnete Interface zwischen dem Zeitpunkt, zu dem der Code es liest, und dem Zeitpunkt, zu dem es tatsächlich verwendet wird, still um. Betroffen waren `gptp_prepare_pdelay_resp()`, das dadurch das (virtuelle und dauerhaft inaktive) Interface der empfangenen Anfrage erbte, der als Filter an `net_if_register_timestamp_cb()` übergebene Interface-Zeiger, der nach der Neuzuordnung nie mehr passte und damit den in @lst:sync-callback-fix behandelten TX-Zeitstempel-Callback gar nicht erst auslöste, sowie `gptp_handle_msg()`, das die Portnummer aus dem bereits umgeschriebenen Interface herleitete und deshalb jede nicht als kritisch eingestufte Nachricht verwarf.
+Das Tagging deckte dabei eine Klasse von Fehlern im Netzwerkstack auf, die ohne #acr("VLAN") nicht auftreten kann. Die #acr("VLAN")-Verarbeitung schreibt das dem Paket zugeordnete Interface zwischen Lese- und Verwendungszeitpunkt still um. Betroffen waren `gptp_prepare_pdelay_resp()`, der an `net_if_register_timestamp_cb()` übergebene Interface-Zeiger sowie `gptp_handle_msg()`. An allen drei Stellen passte das Interface danach nicht mehr zum adressierten Port. Die Folgen: `gptp_prepare_pdelay_resp()` erbte das virtuelle, dauerhaft inaktive Interface. Der Interface-Zeiger löste den in @lst:sync-callback-fix behandelten TX-Zeitstempel-Callback nicht mehr aus und `gptp_handle_msg()` leitete die Portnummer aus dem falschen Interface ab. Dadurch verwarf `gptp_handle_msg()` jede nicht als kritisch eingestufte Nachricht.
 
 === Sendepfad: Anbindung des Credit Based Shapers
-Die Erweiterung des Treibers ist über `CONFIG_ETH_NXP_ENET_1G_AVB` schaltbar und aktiviert einen zweiten Hardware-Ring (Ring 1) samt zugehöriger #acr-emph("DMA")-Deskriptoren, Sende-Semaphore und Staging-Puffer. Sie greift bewusst nur auf derjenigen ENET-Instanz, deren Devicetree-Knoten als `nxp,enet1g` deklariert ist: Die 10/100-Mbit-Instanz besitzt diese Hardware nicht, weshalb dort weder ein zweiter Ring aktiviert noch `ENET_AVBConfigure()` aufgerufen werden darf.
+Die Erweiterung des Treibers ist über `CONFIG_ETH_NXP_ENET_1G_AVB` schaltbar und aktiviert einen zweiten Hardware-Ring (Ring 1) samt zugehöriger #acr-emph("DMA")-Deskriptoren, Sende-Semaphore und Staging-Puffer. Sie greift bewusst nur auf der ENET-Instanz, die diese Hardware-Unterstützung besitzt (`nxp,enet1g`). Die 10/100-Mbit-Instanz bleibt davon unberührt.
 
-Die eigentliche Konfiguration des Shapers erfolgt beim Zurücksetzen des #acr("MAC"). Der Parameter `idleSlope` legt dabei die für Ring 1 garantierte Bandbreite fest; der reservierte Anteil der Linkbandbreite ergibt sich zu $1 \/ (1 + 512 \/ "idleSlope")$, sodass der verwendete Wert von 128 rund $20%$ entspricht.
+Die eigentliche Konfiguration des Shapers erfolgt beim Zurücksetzen des #acr("MAC"). Der Parameter `idleSlope` legt dabei die für Ring 1 garantierte Bandbreite fest. Die verwendete Konfiguration reserviert dafür rund $20%$ der gesamten Linkbandbreite.
 
 #figure(
   c-listing(
@@ -168,37 +168,16 @@ Die eigentliche Konfiguration des Shapers erfolgt beim Zurücksetzen des #acr("M
   caption: [Konfiguration des Credit Based Shapers für Ring 1 der Gigabit-Instanz],
 ) <lst:avb-configure>
 
-Auf dem Sendepfad wählt `eth_nxp_enet_tx()` anschließend anhand des Frame-Typs den Ring aus: #acr("PTP")-Frames werden auf den kreditgeformten Ring 1 geleitet, aller übrige Verkehr verbleibt auf Ring 0. Da beide Ringe eigene Deskriptoren und einen eigenen Staging-Puffer besitzen, kann ein voller Ring 0 den Sendevorgang einer Sync-Nachricht nicht mehr blockieren.
+Auf dem Sendepfad wählt `eth_nxp_enet_tx()` anschließend anhand des Frame-Typs den Ring aus. Maßgeblich ist der in `rxClassifyMatch` hinterlegte VLAN-Priority-Wert (hier 7, siehe @lst:avb-configure). Frames mit dieser Priorität werden dem Ring 1 zugeordnet, aller übrige Verkehr verbleibt auf Ring 0. Da beide Ringe eigene Deskriptoren und einen eigenen Staging-Puffer besitzen, kann ein voller Ring 0 den Sendevorgang einer Sync-Nachricht nicht mehr blockieren.
 
-Dass diese Umleitung zunächst wirkungslos blieb, lag an einem Fehler in der NXP-HAL. `ENET_TransmitIRQHandler()` wertet zwar den bedienten Ring aus, um die passende Interrupt-Maske zu bestimmen, prüfte für die Entscheidung, ob die Sende-Deskriptoren zurückgewonnen werden, aber unabhängig davon fest das Interrupt-Bit von Ring 0. Für Ring 1 war diese Bedingung nie erfüllt, sodass `ENET_ReclaimTxDescriptor()` dort nie aufgerufen wurde. In der Folge blieb die Sende-Metainformation eines jeden auf Ring 1 übertragenen Frames leer - und damit auch der Zeitstempel, den der in @lst:sync-callback-fix beschriebene Mechanismus benötigt. Behoben wurde dies, indem das auszuwertende Interrupt-Bit wie die Maske selbst pro Ring bestimmt wird.
-
-#figure(
-  diff-listing(
-    "uint32_t mask     = kENET_TxBufferInterrupt | kENET_TxFrameInterrupt;\n"
-      + "+uint32_t frameIrq = kENET_TxFrameInterrupt;\n"
-      + "\n"
-      + " switch (ringId) {\n"
-      + " case kENET_Ring1:\n"
-      + "      mask     = kENET_TxFrame1Interrupt | kENET_TxBuffer1Interrupt;\n"
-      + "+     frameIrq = kENET_TxFrame1Interrupt;\n"
-      + "      break;\n"
-      + " /* ... */\n"
-      + " }\n"
-      + "\n"
-      + "-if (handle->txReclaimEnable[index] && (irq & kENET_TxFrameInterrupt)) {\n"
-      + "+if (handle->txReclaimEnable[index] && (irq & frameIrq)) {\n"
-      + "      ENET_ReclaimTxDescriptor(base, handle, index);\n"
-      + " }",
-    width: 100%,
-  ),
-  caption: [Ringabhängige Auswertung des Sende-Interrupts in `ENET_TransmitIRQHandler()`],
-) <lst:hal-framirq-fix>
+Damit diese Umleitung tatsächlich wirkt, muss zusätzlich eine Anpassung in der NXP-HAL berücksichtigt werden: `ENET_TransmitIRQHandler()` prüfte für die Rückgewinnung der Sende-Deskriptoren unabhängig vom bedienten Ring fest das Interrupt-Bit von Ring 0, sodass `ENET_ReclaimTxDescriptor()` für Ring 1 nie aufgerufen wurde und die benötigten Sende-Zeitstempel leer blieben. Auch dieses Bit musste daher ringabhängig ausgewertet werden.
+#note[Die HAL Änderungen sind hier schwer zu verstehen. Vielleicht komplett entfernen oder in den Grundlagen erklären.]
 
 === Empfangspfad: Ring-Bedienung, Verkehrsklasse und Pufferreservierung
-Der #acr("CBS") schützt ausschließlich die Senderichtung. In dem in Kapitel "Tests" beschriebenen Lastszenario trifft die Nutzlast die Bridge aber am Eingang, sodass drei weitere Engpässe auf dem Empfangspfad beseitigt werden mussten.
+Der #acr("CBS") schützt ausschließlich die Senderichtung. In dem in Kapitel "Tests" beschriebenen Lastszenario trifft die Nutzlast die Bridge aber am Eingang. Daher müseen drei weitere Engpässe auf dem Empfangspfad beseitigt werden.
 
 *Verschränkte Bedienung beider Empfangs-Ringe*\
-Der Empfangs-Task des Treibers leerte den bedienten Ring bislang vollständig, bevor er zurückkehrte - mit Ring 1 wäre daraus geworden, dass Ring 0 erst restlos abgearbeitet und Ring 1 anschließend bedient wird. Unter einer dauerhaft hohen Paketrate wird Ring 0 jedoch faktisch nie leer, sodass die Frames auf Ring 1 beliebig lange warten müssten. Die Ringe werden deshalb verschränkt bedient: abwechselnd ein Frame aus Ring 1 und eines aus Ring 0, bis beide leer sind. Damit ist die Wartezeit eines #acr("gPTP")-Frames unabhängig von der Last auf höchstens ein Ring-0-Frame begrenzt. Instanzen ohne AVB-Ring verhalten sich unverändert.
+Der Empfangs-Task des Treibers bediente bislang ausschließlich Ring 0. Ring 1 blieb dabei vollständig unberücksichtigt. Mit dem zweiten Ring muss der Task nun sicherstellen, dass auch dessen Frames abgeholt werden. Dies geschieht durch abwechselndes Auslesen. Der Task liest im Wechsel ein Frame aus Ring 1 und eines aus Ring 0, bis beide Ringe leer sind (siehe @lst:rx-ring-interleave). Damit ist die Wartezeit eines #acr("gPTP")-Frames unabhängig von der Last auf höchstens ein Ring-0-Frame begrenzt. Instanzen ohne AVB-Ring verhalten sich unverändert.
 
 #figure(
   diff-listing(
@@ -222,9 +201,8 @@ Der Empfangs-Task des Treibers leerte den bedienten Ring bislang vollständig, b
 ) <lst:rx-ring-interleave>
 
 *Eigene Empfangs-Verkehrsklasse für gPTP*\
-Zephyr kann eingehende Pakete auf mehrere nach Priorität getrennte Empfangs-Warteschlangen verteilen, wählt die Warteschlange dabei aber anhand der Priorität, die dem Paket im Treiber zugewiesen wurde. Der ENET-Treiber setzte diese nie, sodass jedes Paket mit der Standardpriorität 0 im Netzwerkstack ankam. Bei den im Testaufbau konfigurierten vier Empfangs-Verkehrsklassen bildet die Zuordnungstabelle die Prioritäten 0 und 1 auf dieselbe Klasse ab - #acr("gPTP") und Nutzlast landeten damit gemeinsam in Klasse 0, und die Konfiguration mehrerer Empfangs-Verkehrsklassen war auf der Empfangsseite vollständig wirkungslos. #acr("gPTP")-Nachrichten reihten sich dadurch hinter der Nutzlast ein und wurden verworfen, sobald deren Slot-Budget erschöpft war.
-
-Da die Empfangs-Verkehrsklassen zudem systemweit und nicht pro Schnittstelle geführt werden, betraf dieser Engpass auch den zweiten, selbst vollkommen lastfreien Port der Bridge - was erklärt, warum sich die Störung im Testaufbau bis zum Endpoint fortsetzte. Behoben wurde dies, indem #acr("PTP")-Frames im Treiber vor der Übergabe an den Netzwerkstack die Priorität `NET_PRIORITY_IC` erhalten und damit in einer eigenen Warteschlange mit eigenem Slot-Budget landen - dieselbe Klasse, die das #acr("gPTP")-Subsystem auf der Senderichtung ohnehin bereits setzt.
+#note[Was passiert erst? Puffer allokieren oder in Warteschlange schicken? Dementsprechen sortieren.]
+Zephyr kann eingehende Pakete anhand einer im Treiber zugewiesenen Priorität auf mehrere getrennte, priorisierte Empfangs-Warteschlangen zum Netzwerkstack verteilen. Der ENET-Treiber setzte diese Priorität jedoch nie, sodass sämtliche Pakete mit der Standardpriorität 0 ankamen und #acr("gPTP") und Nutzlast in derselben Warteschlange landeten. Die konfigurierten Verkehrsklassen blieben auf der Empfangsseite damit wirkungslos. Behoben wurde dies, indem #acr("PTP")-Frames im Treiber vor der Übergabe an den Netzwerkstack die Priorität `NET_PRIORITY_IC` erhalten und damit in einer eigenen Warteschlange landen, dieselbe Klasse, die das #acr("gPTP")-Subsystem sendeseitig ohnehin bereits setzt.
 
 #figure(
   diff-listing(
@@ -241,11 +219,11 @@ Da die Empfangs-Verkehrsklassen zudem systemweit und nicht pro Schnittstelle gef
 ) <lst:rx-traffic-class>
 
 *Reservierung von Empfangspuffern*\
-Die beiden vorangegangenen Maßnahmen regeln, in welcher Reihenfolge Frames bedient und eingereiht werden - nicht aber, ob für sie überhaupt Speicher zur Verfügung steht. Genau hier lag der eigentliche Engpass: Der Netzwerkstack allokiert eingehende Pakete aus einem einzigen, für alle Schnittstellen gemeinsamen Pool. Eine Messung der treiberinternen Zähler unter Last zeigte, dass auf der Gigabit-Instanz bei rund 3.670 eintreffenden Frames pro Sekunde etwa 2.300 bereits an dieser Allokation scheiterten, also rund $63%$ des Eingangsverkehrs im Treiber verworfen wurden - und, entscheidend für die Diagnose, auf der lastfreien 10/100-Instanz mit rund $56%$ ein praktisch ebenso hoher Anteil. Ein reines Durchsatzproblem eines einzelnen Ports kann das nicht erklären; die Last einer Schnittstelle leerte den gemeinsamen Pool und ließ damit jede andere Schnittstelle verhungern.
+Die beiden vorangegangenen Maßnahmen regeln, in welcher Reihenfolge Frames bedient und eingereiht werden, nicht aber, ob für sie überhaupt Speicher zur Verfügung steht. Genau hier lag der eigentliche Engpass. Trotz separater Ringe und eigener Verkehrsklasse allokiert der Netzwerkstack eingehende Pakete weiterhin aus einem einzigen, für alle Schnittstellen und Verkehrsklassen gemeinsamen Pool. #acr("gPTP") und Best-Effort-Verkehr konkurrieren dort also unverändert um denselben Speicher, und die Last einer Schnittstelle kann damit jede andere verhungern lassen.
 
-Ursächlich dafür war die Reihenfolge im Treiber: Der Netzwerkpuffer wurde allokiert, *bevor* der Frame aus dem Ring gelesen wurde. Der Treiber musste sich also für einen Puffer entscheiden, ohne die Verkehrsklasse des Frames zu kennen - weshalb weder die Hardware-Klassifizierung über den AVB-Ring noch die zuvor beschriebenen Empfangs-Verkehrsklassen beeinflussen konnten, welche Frames einen Puffer erhalten. Beide Mechanismen wurden bei der ersten Software-Allokation ausgehebelt.
+Ursächlich dafür war die Reihenfolge im Treiber. Der Netzwerkpuffer wurde allokiert, bevor der Frame aus dem Ring gelesen wurde, sodass der Treiber beide Verkehrsklassen bei der Allokation gleich behandelte. Weder die Hardware-Klassifizierung noch die zuvor beschriebenen Empfangs-Verkehrsklassen konnten dadurch beeinflussen, welche Frames einen Puffer erhielten. Beide Mechanismen wurden bereits bei der ersten Software-Allokation ausgehebelt.
 
-Die Reihenfolge wurde deshalb umgekehrt: Der Frame wird zuerst in den ohnehin vorhandenen Staging-Puffer gelesen, anhand der gelesenen Bytes klassifiziert und erst danach aus dem passenden Pool allokiert. Für #acr("PTP")-Frames steht dafür ein eigener, reservierter Pool bereit (`CONFIG_ETH_NXP_ENET_PTP_RX_PKTS`/`_BUFS`), auf den Best-Effort-Verkehr keinen Zugriff hat. Die Klassifizierung selbst wertet dabei das Frame auf der Leitung aus - zunächst auf einen VLAN-Tag, dann auf den dahinterliegenden EtherType - statt sich auf die #acr("VLAN")-Einstellung des Interfaces zu verlassen, und ist damit für getaggte wie ungetaggte Frames auf demselben Link korrekt.
+Die Reihenfolge wurde deshalb umgekehrt. Der Frame wird zuerst in den ohnehin vorhandenen Staging-Puffer gelesen, anhand der gelesenen Bytes klassifiziert und erst danach aus dem passenden Pool allokiert. Für #acr("PTP")-Frames steht dafür ein eigener, reservierter Pool bereit. Die Klassifizierung selbst wertet dabei das Frame auf der Leitung aus. Zunächst auf einen VLAN-Tag für den Ring und anschließend auf den dahinterliegenden EtherType für die Priority-Queue.
 
 #figure(
   diff-listing(
