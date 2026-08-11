@@ -8,7 +8,7 @@
 // Trichter: Ethernet -> TSN -> gPTP -> Embedded/RTOS -> diese Arbeit
 
 == Motivation
-Mit dem Aufkommen von Industrie 4.0 und dem autonomen Fahren steigen die Anforderungen an die Echtzeitfähigkeit industrieller und automobiler Netzwerke. Standard-Ethernet arbeitet nach dem Best-Effort-Prinzip und kann den dafür nötigen Determinismus nicht gewährleisten@ethernetDefinitiveGuide. #acr-emph("TSN") adressiert dieses Problem durch eine Reihe von #acr-emph("IEEE")-Standards. Deren Grundbaustein die präzise Zeitsynchronisation mittels #acr("IEEE") 802.1AS bildet@ieee8021as2025. Dieses Protokoll wird in der Praxis auch als #acr-emph("gPTP") bezeichnet.
+Mit dem Aufkommen von Industrie 4.0 und dem autonomen Fahren steigen die Anforderungen an die Echtzeitfähigkeit industrieller und automobiler Netzwerke. Standard-Ethernet arbeitet nach dem Best-Effort-Prinzip und kann den dafür nötigen Determinismus nicht gewährleisten@ethernetDefinitiveGuide. #acr-emph("TSN") adressiert dieses Problem durch eine Reihe von #acr-emph("IEEE")-Standards. Deren Grundbaustein bildet die präzise Zeitsynchronisation mittels #acr("IEEE") 802.1AS@ieee8021as2025. Dieses Protokoll wird in der Praxis auch als #acr-emph("gPTP") bezeichnet.
 
 Gleichzeitig gewinnen ressourcenbeschränkte Embedded-Systeme in diesen Anwendungsbereichen an Bedeutung. Sie sind kostengünstiger und energieeffizienter als herkömmliche Industrierechner. #acr-emph("RTOS") wie Zephyr@zephyr_home ermöglichen dabei eine plattformunabhängige Entwicklung mit deterministischem Zeitverhalten@hohee2021embeddedos.
 

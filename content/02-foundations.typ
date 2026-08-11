@@ -24,7 +24,7 @@ Auf der in @osi-model eingeführten Sicherungsschicht (Layer 2) trifft Standard-
 Eine gemeinsame Zeitbasis allein genügt jedoch nicht, um die Bounded Latency zu garantieren: Sie sorgt zwar dafür, dass alle Knoten dieselbe Zeit kennen, verhindert aber nicht, dass ein Burst an Best-Effort-Nachrichten die Synchronisation behindert. #acr("TSN") stellt dafür ergänzend Mechanismen zur Verkehrsformung bereit, die reservierten Datenströmen unabhängig vom übrigen Netzwerkverkehr eine garantierte Bandbreite zusichern. Diese gehen auf die #acr-emph("AVB")-Arbeitsgruppe zurück, aus der sich #acr("TSN") entwickelt hat @zhang2024tsn, und werden am Beispiel des Credit Based Shaping in @cbs wieder aufgegriffen.
 
 == Das Zeitsynchronisationsprotokoll IEEE 802.1AS
-Dieses Kapitel beschreibt das Zeitsynchronisationsprotokoll IEEE 802.1AS, das im #acr("TSN")-Kontext auch als #acr("gPTP") bezeichnet wird. #acr("gPTP") definiert Verfahren, um die Clocks verteilert System über ein lokases Netzwerk im Sub-Mikrosekundenbereich zu synchronisieren. Im Folgenden werden die Abgrenzungen zu anderen Protokollen, die Netzwerktopologie, die Synchronisations- und Messmechanismen sowie die Rolle einer #acr("gPTP")-Bridge im Detail erläutert.
+Dieses Kapitel beschreibt das Zeitsynchronisationsprotokoll IEEE 802.1AS, das im #acr("TSN")-Kontext auch als #acr("gPTP") bezeichnet wird. #acr("gPTP") definiert Verfahren, um die Clocks verteilter Systeme über ein lokales Netzwerk im Sub-Mikrosekundenbereich zu synchronisieren. Im Folgenden werden die Abgrenzungen zu anderen Protokollen, die Netzwerktopologie, die Synchronisations- und Messmechanismen sowie die Rolle einer #acr("gPTP")-Bridge im Detail erläutert.
 
 
 === Einordnung und Abgrenzung
@@ -57,31 +57,31 @@ Um die Notwendigkeit von #acr("gPTP") besser zu verstehen, muss es gegenüber de
 )<comparison-ptp-gptp>
 
 //todo: quelle für NTP
-#acr("NTP") stellt das Standardverfahren für die allgeme ine Systemzeitsynchronistation im IT-Bereich dar. Es ist darauf ausgelegt, Netzwerklatenzen und Routenänderungen im Internet oder in Weitverkehrsnetzen statistisch auszugleichen. Toleriert dennoch Abweichungen im Milliskeundenbereich@ieee8021as2025[C.3]. Für Anwendungen in der industriellen Automatisierung oder im Automobilbereich sind jedoch Präzisionen im Nanosekundebreich erforderlich.
+#acr("NTP") stellt das Standardverfahren für die allgemeine Systemzeitsynchronisation im IT-Bereich dar. Es ist darauf ausgelegt, Netzwerklatenzen und Routenänderungen im Internet oder in Weitverkehrsnetzen statistisch auszugleichen. Toleriert dennoch Abweichungen im Millisekundenbereich@ieee8021as2025[C.3]. Für Anwendungen in der industriellen Automatisierung oder im Automobilbereich sind jedoch Präzisionen im Nanosekundenbereich erforderlich.
 
 Diese Genauigkeit erreicht #acr("PTP")v2 vor allem durch Hardware-Timestamping der Paketlaufzeit. Da der Standard ein möglichst breites Anwendungsspektrum abdecken soll, lässt er zentrale Verhaltensweisen wie Transportmechanismus, Architektur, Laufzeitmessverfahren und Zeitstempelverarbeitung als optionale, profilabhängige Konfiguration offen @ieee8021as2025[7.6]. Je mehr davon konfigurierbar ist, desto eher wählen Hersteller unterschiedliche Optionen -- was die Interoperabilität zwischen Geräten verschiedener Hersteller in der Praxis erschwert.
 
 Das #acr("gPTP") löst dieses Problem, indem es ein fest definiertes, stark eingeschränktes Profil von #acr("PTP")v2 vorschreibt @ieee8021as2025[7.1]. Es eliminiert optionale Parameter und erzwingt standardmäßig die #acr-emph("P2P")-Laufzeitmessung sowie standardisierte Nachrichtenintervalle @ieee8021as2025[7.6]. Dadurch wird ein Plug-and-Play Verhalten für lokale, zeitkritische Ethernet-Netzwerke realisiert.
 
 === Rollen und Netzwerktopologie
-Eine #acr("gPTP")-Domäne definiert eine logische Gruppierung von Geräten, die über das Netzwerk miteinander kommunizieren und auf eine gemeinsame Zeitbasis synchronisiert werden. Innerhalb dieser Topologie nimmt jedes Gerät eine spzifische Rolle ein. Die Netzwerkschnittstellen (Ports) eines Gerätes können dabei in verschiedene Zustände versetzt werden.
+Eine #acr("gPTP")-Domäne definiert eine logische Gruppierung von Geräten, die über das Netzwerk miteinander kommunizieren und auf eine gemeinsame Zeitbasis synchronisiert werden. Innerhalb dieser Topologie nimmt jedes Gerät eine spezifische Rolle ein. Die Netzwerkschnittstellen (Ports) eines Gerätes können dabei in verschiedene Zustände versetzt werden.
 
 In einer #acr("gPTP")-Domäne wird zwischen drei primären Gerätetypen unterschieden:
 
 - *#acr-emph("GM"):* Die #acr("GM") bildet die oberste Zeitreferenz für die gesamte Domäne. Sie verfügt in der Regel über eine hochpräzise Zeitquelle und verteilt ihre Zeit im Netzwerk@ieee8021as2025[3.16].
 
-- *Time-Aware Bridge:* Auch PTP Relay Instance genannt, verbindet verschiedene Netzwerksegmente (vergleichbar mit einem Switch) und leitet Synchronisationsdaten weiter. Um Akkumulationseffekte von Verzögerungen zu vermeiden, nimmt sie eine aktive Rolle im Protokoll ein. Die Ports einer Bridge können dabei verschieden Rollen einnehmen@ieee8021as2025[3.27]:
-  - *Master Port:* Dient als Zeitquelle für das angeschlossene Netzwerk. Sendet periodisch Synchronisationsnachrichten, um das Nochfolgende Gerät zu Synchronisieren.
-  - *Slave Port:* Empängt die Synchronisationsnachrichten der übergeordneten Clock, um die eigene lokale Clock zu Synchronisieren.
+- *Time-Aware Bridge:* Auch PTP Relay Instance genannt, verbindet verschiedene Netzwerksegmente (vergleichbar mit einem Switch) und leitet Synchronisationsdaten weiter. Um Akkumulationseffekte von Verzögerungen zu vermeiden, nimmt sie eine aktive Rolle im Protokoll ein. Die Ports einer Bridge können dabei verschiedene Rollen einnehmen@ieee8021as2025[3.27]:
+  - *Master Port:* Dient als Zeitquelle für das angeschlossene Netzwerk. Sendet periodisch Synchronisationsnachrichten, um das nachfolgende Gerät zu synchronisieren.
+  - *Slave Port:* Empfängt die Synchronisationsnachrichten der übergeordneten Clock, um die eigene lokale Clock zu synchronisieren.
 
-- *Time-Aware Endstation:* Eine PTP Instance die den Endpunkte der Zeitsynchronisationshierarchie darstellt. Sie empfangen die Zeitinformationen, synchronisieren ihre lokale Clock darauf, leiten diese jedoch nicht an andere Geräte weiter. Ihr Port arbeitet daher immer im Slave-Modus@ieee8021as2025[3.25].
+- *Time-Aware Endstation:* Eine PTP Instance, die den Endpunkt der Zeitsynchronisationshierarchie darstellt. Sie empfängt die Zeitinformationen, synchronisiert ihre lokale Clock darauf, leitet diese jedoch nicht an andere Geräte weiter. Ihr Port arbeitet daher immer im Slave-Modus@ieee8021as2025[3.25].
 
 Welches Gerät welche dieser Rollen einnimmt, ist nicht statisch festgelegt, sondern wird im Normalbetrieb dynamisch durch den #acr-emph("BTCA") bestimmt: Alle Geräte einer Domäne tauschen dazu Announce-Nachrichten mit vergleichbaren Qualitätsattributen ihrer Clock aus (u. a. `priority1`, Clock-Klasse und -Genauigkeit) @ieee8021as2025[8.6] und einigen sich verteilt darauf, welche Clock die beste verfügbare Referenz darstellt. Die so bestimmte Clock wird zum Grandmaster. Auf Basis dieses Vergleiches entscheidet jedes Gerät zudem selbst, in welchen Zustand die einzelnen Ports seiner Schnittstellen versetzt werden@ieee8021as2025[10.3.1.2]. In dem in @testaufbau beschriebenen Testaufbau dieser Arbeit ist der #acr("BTCA") jedoch nicht aktiv, da hier ausschließlich die Bridge-Funktionalität selbst validiert werden soll. Deshalb werden die Rollen den Geräten statisch zugewiesen.
 
 === Die Sync-Nachricht
 
-Um das Prinzip der Zeitsynchronisierung zu verstehen, muss zunächst die Funktionsweise einer Clock in digitalen System verstanden werden. Jede #acr-emph("CPU") besitzt einen internen Taktgeber (Hardware-Oszillator), der als Frequenzquelle dient.
-Eine Clock zählt die Schwingungen dieses Oszillators und bildet daraus die lokale Systemzeit ab@tanenbaum2016modernos[5.5.1]. Aufgrund von Fertigungstoleranzen, Temparaturschwankungen und Alterungen weisen diese Quarze jedoch eine geringfügige Frequenzabweichung sowie einen Phasenversatz zur Refferenzzeit auf. Ohne eine dauerhafte Korrektur laufen die Clocks im Laufe der Zeit auseinander.
+Um das Prinzip der Zeitsynchronisierung zu verstehen, muss zunächst die Funktionsweise einer Clock in digitalen Systemen verstanden werden. Jede #acr-emph("CPU") besitzt einen internen Taktgeber (Hardware-Oszillator), der als Frequenzquelle dient.
+Eine Clock zählt die Schwingungen dieses Oszillators und bildet daraus die lokale Systemzeit ab@tanenbaum2016modernos[5.5.1]. Aufgrund von Fertigungstoleranzen, Temperaturschwankungen und Alterungen weisen diese Quarze jedoch eine geringfügige Frequenzabweichung sowie einen Phasenversatz zur Referenzzeit auf. Ohne eine dauerhafte Korrektur laufen die Clocks im Laufe der Zeit auseinander.
 //todo: quelle suchen
 Der Synchronisationsmechanismus gleicht diesen Versatz aus, indem die lokale Clock periodisch an die Zeitbasis des Masters angepasst wird. Hierbei unterscheidet der Standard zwischen zwei Verfahren: dem *Two-Step*- und dem *Single-Step*-Verfahren, die in @sync-mechanism dargestellt sind.
 #figure(
@@ -98,7 +98,7 @@ Bei dem im @sync-mechanism (linke Seite) dargestellten Two-Step-Verfahren erfolg
 
   - *`preciseOriginTimestamp`:* Der zuvor auf Master-Seite erfasste Sendezeitpunkt $t_s$, ausgedrückt in der Zeitbasis der Grandmaster Clock. Er bildet die eigentliche Referenzzeit, auf die sich alle weiteren Korrekturen beziehen@ieee8021as2025[10.2.2].
 
-  - *`correctionField`:* Ein von der Grandmaster Clock mit dem Wert "0" initialisierter Korrekturwert, der auf dem Weg zum Slave alle Verzögerungen aufsummiert, die im `preciseOriginTimestamp` noch nicht enthalten sind. Besonders die gemessene Leitungsverzögerung, die eine Nachricht über zwischengeschaltete Bridges akkumuliert (`residence time`), dürfen hier nicht missachtet werden. Damit lässt sich der tatsächliche Sendezeitpunkt der Grandaster Clock trotz dieser Verzögerungen exakt rekonstruieren@ieee8021as2025[10.2.2].
+  - *`correctionField`:* Ein von der Grandmaster Clock mit dem Wert "0" initialisierter Korrekturwert, der auf dem Weg zum Slave alle Verzögerungen aufsummiert, die im `preciseOriginTimestamp` noch nicht enthalten sind. Besonders die gemessene Leitungsverzögerung, die eine Nachricht über zwischengeschaltete Bridges akkumuliert (`residence time`), dürfen hier nicht missachtet werden. Damit lässt sich der tatsächliche Sendezeitpunkt der Grandmaster Clock trotz dieser Verzögerungen exakt rekonstruieren@ieee8021as2025[10.2.2].
 
   - *`rateRatio`:* Das Verhältnis der Frequenz der Grandmaster Clock zur Frequenz der lokalen Clock des Slaves. Ausgehend vom Wert eins bei der Grandmaster Clock wird sie über jeden Hop hinweg fortgeschrieben und beschreibt so stets das aktuelle Frequenzverhältnis zur ursprünglichen Zeitquelle (siehe Abschnitt „Die #acr("gPTP") Bridge"). Neben der Offset-Korrektur erlaubt sie dem Slave dadurch auch, seine lokale Taktrate an die des Masters anzupassen@ieee8021as2025[10.2.2].
 
@@ -106,7 +106,7 @@ Dieser Ablauf kann auch in einem Schritt erfolgen. Dabei werden, wie auf der rec
 
 
 === Messung der Leitungsverzögerung
-Ein weiterer wichtiger Mechanismus ist das berechenen des `propagation Delays`. Hierbei wird ermittelt, wie lange ein Frame auf der physischen Leitung benötigt.
+Ein weiterer wichtiger Mechanismus ist das Berechnen des `propagation Delays`. Hierbei wird ermittelt, wie lange ein Frame auf der physischen Leitung benötigt.
 
 #figure(
   image("../assets/Sync/gPTP-pDelay-mechanism.png", width: 80%),
@@ -129,20 +129,20 @@ Das Ergebnis $D$ entspricht dem durchschnittlichen `propagation Delay`. Neben $D
 === Der Synchronisationsmechanismus <sync-process>
 Nachdem der Slave alle Informationen erhalten hat, führt er die finale Synchronisation der lokalen Clock durch. Dieser Prozess besteht aus drei Schritten:
 
-1. *Berechnung der korrigierten Zeit:* Der Slave nutzt den `precisionOriginTimestamp` als Basiszeit des Grandmasters und addiert das `correctionField` hinzu. Das `correctionField` kompensiert dabei Laufzeitdifferenzen, die durch Zwischenkonoten entstanden sind. Die Summe ergbit die synchronisierte Zeit zum Zeitpunkt des Absendens der Sync-Nachricht.@ieee8021as2025[11.1.3]
+1. *Berechnung der korrigierten Zeit:* Der Slave nutzt den `precisionOriginTimestamp` als Basiszeit des Grandmasters und addiert das `correctionField` hinzu. Das `correctionField` kompensiert dabei Laufzeitdifferenzen, die durch Zwischenknoten entstanden sind. Die Summe ergibt die synchronisierte Zeit zum Zeitpunkt des Absendens der Sync-Nachricht.@ieee8021as2025[11.1.3]
 
 2. *Einbeziehung der Leitungsverzögerung:* Um den absoluten Zeitversatz zur Master-Clock zu bestimmen, addiert der Slave die zuvor gemessene Leitungsverzögerung ($D$) zu der korrigierten Zeit. Der Vergleich mit dem eigenen Empfangszeitpunkt ($t_r$) ergibt den aktuellen Offset, um den die lokale Clock korrigiert werden muss.@ieee8021as2025[11.1.3]
 
 3. *Frequenzanpassung (Syntonisierung):* Um ein erneutes Auseinanderlaufen der Uhren zu verhindern, verwendet der Slave die `rateRatio`. Dies ist das Verhältnis der Grandmaster-Frequenz zur eigenen lokalen Frequenz. Durch die Anpassung der lokalen Zählrate an diesen Wert wird die Frequenz des lokalen Oszillators an den Takt des Masters angeglichen.@ieee8021as2025[11.1.3]
 
 === Die gPTP Bridge
-Anders als ein klassischer Ethernet-Switch, der Frames auf Layer 2 lediglich weiterleitet, nimmt eine Time-Aware Bridge aktiv am #acr("gPTP") teil. Dabei terminiert die Bridge eingehende Sync-Nachrichten auf dem Slave-Port und generiert auf den Master-Ports eigene, neue Sync- und Follow_Up Nachrichten für die nachfolgenden Geräte. Diese aktive Beteiligung ist notwendig, damit sowohl die im vorherigen Abschnitt beschriebenen Leitungsverzögerungen als auch die interne Verarbeitsungszeit an jedem Hop korrekt kompensiert werden und sich Messfehler nicht unkontrolliert über mehrere Bridges hinweg akkumulieren.
+Anders als ein klassischer Ethernet-Switch, der Frames auf Layer 2 lediglich weiterleitet, nimmt eine Time-Aware Bridge aktiv am #acr("gPTP") teil. Dabei terminiert die Bridge eingehende Sync-Nachrichten auf dem Slave-Port und generiert auf den Master-Ports eigene, neue Sync- und Follow_Up Nachrichten für die nachfolgenden Geräte. Diese aktive Beteiligung ist notwendig, damit sowohl die im vorherigen Abschnitt beschriebenen Leitungsverzögerungen als auch die interne Verarbeitungszeit an jedem Hop korrekt kompensiert werden und sich Messfehler nicht unkontrolliert über mehrere Bridges hinweg akkumulieren.
 
 Damit die Bridge eine eingehende Sync-Nachricht korrekt an ihre Master-Ports weiterleiten kann, sind folgende Schritte notwendig:
 
 1. *Empfangen auf dem Slave-Port:* Die Bridge empfängt die Sync-Nachricht und erfasst analog zum in @sync-mechanism dargestellten Sync-Verfahren den Empfangszeitpunkt $t_r$.
 
-2. *Messung der `residence time`:* Bevor die Bridge die Nachricht weiterleiten kann, durchläuft diese intern den Netzwer-Stack des Geräts. Die dafür benötigte Zeitspanne bis zum Abesende auf dem Master-Port zum Zeitpunkt $t_s$ wird als `residence time` bezeichent und ergibt sich aus $t_s - t_r$.
+2. *Messung der `residence time`:* Bevor die Bridge die Nachricht weiterleiten kann, durchläuft diese intern den Netzwerk-Stack des Geräts. Die dafür benötigte Zeitspanne bis zum Absenden auf dem Master-Port zum Zeitpunkt $t_s$ wird als `residence time` bezeichnet und ergibt sich aus $t_s - t_r$.
 
 3. *Aktualisierung der `rateRatio`:* Die Bridge verknüpft die im Follow_Up empfangene `rateRatio` mit der über den in @pDelay-mechanism beschriebenen pDelay-Mechanismus lokal gemessenen `neighborRateRatio` (dem Frequenzverhältnis zur Master Clock): $ "rateRatio"_("neu") = "rateRatio"_("alt") dot "neighborRateRatio" $
   Dadurch bleibt die `rateRatio` über beliebig viele Hops hinweg gültig und beschreibt stets das Frequenzverhältnis zwischen der Grandmaster Clock und der lokalen Clock der Bridge.@ieee8021as2025[11.1.3]
@@ -164,8 +164,8 @@ Die #acr("MAC")-Schicht bildet die untere der beiden in @osi-model eingeführten
 
 === Hardware-Timestamping <hardware-timestamping>
 Wie in @comparison-ptp-gptp dargestellt, erfordert #acr("gPTP") eine Genauigkeit im Sub-Mikrosekundenbereich. Diese Anforderung hat direkte Konsequenzen für die Art und Weise, wie die Zeitstempel erfasst werden müssen.\
-Eine naheliegende Möglichkeit wäre, den Zeitstempel rein in Software zu erfassen, etwa in dem Moment, in dem die Applikation oder der Netzwerktreiber ein empfangenes Paket verarbeitet. Ein solcher Zeitstempel unterliegt jedoch mehreren nicht-deterministischen Verzögerungsquellen. Interrupt-Latenzen, Paketverartbeitung durch die Treiber, die Zeit bis das Betriebssystem den zuständigen Thread einplant (OS-Scheduling), sowie das durchreichen der Pakete durch die Schichten des Netzwerk-Stacks bis zur Applikation.
-Diese Verzögerungen summieren sich auf, sodass Abweichungen im Bereich mehrerer zehn bis hundert Mikrosekunden enstehen und damit zu einem Vielfachen der von #acr("gPTP") geforderten Genauigkeit abweicht. Reines Software-Timestamping ist damit für #acr("gPTP") ungeeignet.\
+Eine naheliegende Möglichkeit wäre, den Zeitstempel rein in Software zu erfassen, etwa in dem Moment, in dem die Applikation oder der Netzwerktreiber ein empfangenes Paket verarbeitet. Ein solcher Zeitstempel unterliegt jedoch mehreren nicht-deterministischen Verzögerungsquellen. Interrupt-Latenzen, Paketverarbeitung durch die Treiber, die Zeit bis das Betriebssystem den zuständigen Thread einplant (OS-Scheduling), sowie das Durchreichen der Pakete durch die Schichten des Netzwerk-Stacks bis zur Applikation.
+Diese Verzögerungen summieren sich auf, sodass Abweichungen im Bereich mehrerer zehn bis hundert Mikrosekunden entstehen und damit zu einem Vielfachen der von #acr("gPTP") geforderten Genauigkeit abweichen. Reines Software-Timestamping ist damit für #acr("gPTP") ungeeignet.\
 Aus diesem Grund wird für #acr("gPTP")-fähige Systeme dedizierte Netzwerk-Hardware benötigt, die in der Lage ist, Zeitstempel autonom zu erfassen: Die Erfassung erfolgt direkt durch eine Logikeinheit in der Netzwerk-Hardware selbst, ausgelöst durch das tatsächliche Auftreten des Signals, und ist damit unabhängig von der aktuellen Auslastung der #acr("CPU") oder des Betriebssystems. Diese Fähigkeit ist nicht bei jeder Ethernet-Hardware gegeben, sondern setzt entsprechend ausgestattete #acr-emph("MAC")-Controller bzw. #acr("PHY")-Bausteine voraus.
 //Quellen für nicht deterministische Verzögerungen Suchen und wie komme ich auf die Zeit ?
 Ein für die Zeitstempel-Erfassung besonders relevantes Signal ist dabei der #acr-emph("SFD"): ein festes 1-Byte-Muster (`0xD5`), das im Ethernet-Frame unmittelbar auf die Präambel folgt und das Ende der Präambel sowie den Beginn der eigentlichen Nutzdaten markiert @ethernetDefinitiveGuide[4.]. Da seine Bitfolge im Gegensatz zur Präambel eindeutig ist, lässt es sich zuverlässig per Logik in Hardware erkennen und eignet sich damit als präziser, reproduzierbarer Auslösepunkt für einen Zeitstempel.
@@ -215,7 +215,7 @@ Die Architektur des Zephyr-Netzwerkstacks ist auf hohe Performance ausgelegt, wa
 Der Stack ist ähnlich aufgebaut wie das Schichtenmodell aus @osi-model @zephyr_net_stack_architecture. Von oben nach unten gliedert er sich wie folgt:
 - *Anwendung*: Socket- bzw. Management-#acr("API")
 - *Netzwerkprotokolle*: #acr("IP"), #acr("UDP"), #acr("TCP")
-- *Schnittstellen-Abstraktion*: Netzwerkschnittstell
+- *Schnittstellen-Abstraktion*: Netzwerkschnittstelle
 - *L2-Technologie*: Ethernet
 - *Gerätetreiber*: Die unterste Schicht, die den direkten Kontakt zur Hardware herstellt.
 

@@ -9,7 +9,7 @@ Zephyrs #acr("gPTP")-Implementierung ist grundsätzlich für Endgeräte mit eine
 
 === Board-spezifische Änderungen (NXP i.MX RT) <board-anpassungen>
 *#acr("PTP")-Clock Konfiguration*\
-Die Initialisierung der #acr("PTP")-Clock wurde angepasst. Der ursprüngliche Zephyr-Code konfiguriert nur einen Clock für eine einzelne ENET-Instanz. Für die Bridge wurde ein zweiter, identisch konfigurierte CLock für die zweite ENET-Instanz ergänzt. Beide Clocks werden aus `SYS_PLL1_DIV2` (geteilt durch 20) abgeleitet, was einer Taktfrequenz von $25"MHz"$ entspricht, und erfüllen damit die in @normative-leistungsanforderungen geforderte Granularität von $40n s$.
+Die Initialisierung der #acr("PTP")-Clock wurde angepasst. Der ursprüngliche Zephyr-Code konfiguriert nur einen Clock für eine einzelne ENET-Instanz. Für die Bridge wurde eine zweite, identisch konfigurierte Clock für die zweite ENET-Instanz ergänzt. Beide Clocks werden aus `SYS_PLL1_DIV2` (geteilt durch 20) abgeleitet, was einer Taktfrequenz von $25"MHz"$ entspricht, und erfüllen damit die in @normative-leistungsanforderungen geforderte Granularität von $40n s$.
 
 #figure(
   diff-listing(
@@ -24,17 +24,17 @@ Die Initialisierung der #acr("PTP")-Clock wurde angepasst. Der ursprüngliche Ze
   caption: [PTP-Clock Konfiguration],
 ) <lst:PTP-Clock_config>
 
-Ein einzelner, gemeinsam genutzter #acr("PTP")-Timer für beide Ports ist dabei keine Alternative. In klassischen Switch-ICs, deren Ports über eine gemeinsame, integrierte Switching-Fabric verbunden sind, verteilt genau eine zentraler Clock seinen Zählerstand intern an die Timestamp-Einheiten aller Ports, sodass sich eine zusätzliche Synchronisierung zwischen den Ports von vornherein erübrigt. Auf dem hier eingesetzten #acr-emph("SoC") ist dieser Weg jedoch nicht umsetzbar: `enet` und `enet1g` sind zwei eigenständige #acr("MAC")-Peripherien, die ursprünglich für den Einsatz als jeweils einzelne Schnittstelle in einem Endgerät ausgelegt sind. Jede besitzt einen eigenen #acr("PTP")-Timer, der laut Clock-Baum des Referenzhandbuchs fest mit genau einem eigenen Taktausgang der Clock-Control-Einheit verschaltet ist (`ENET_TIMER1` bzw. `ENET_TIMER2`) @nxp_imxrt1170_refman[S. 1426]; einen internen Pfad, über den sich einer der beiden Taktausgänge zusätzlich auf die jeweils andere Instanz routen ließe, sieht die Hardware nicht vor. Eine Instanz kann folglich nicht an die Clock der anderen angeschlossen werden - weshalb zwei separate Clocks konfiguriert werden müssen und weshalb überhaupt erst die in @testaufbau beschriebene bridge-interne Synchronisierung der beiden Timer notwendig wird.
+Ein einzelner, gemeinsam genutzter #acr("PTP")-Timer für beide Ports ist dabei keine Alternative. In klassischen Switch-ICs, deren Ports über eine gemeinsame, integrierte Switching-Fabric verbunden sind, verteilt genau eine zentrale Clock ihren Zählerstand intern an die Timestamp-Einheiten aller Ports, sodass sich eine zusätzliche Synchronisierung zwischen den Ports von vornherein erübrigt. Auf dem hier eingesetzten #acr-emph("SoC") ist dieser Weg jedoch nicht umsetzbar: `enet` und `enet1g` sind zwei eigenständige #acr("MAC")-Peripherien, die ursprünglich für den Einsatz als jeweils einzelne Schnittstelle in einem Endgerät ausgelegt sind. Jede besitzt einen eigenen #acr("PTP")-Timer, der laut Clock-Baum des Referenzhandbuchs fest mit genau einem eigenen Taktausgang der Clock-Control-Einheit verschaltet ist (`ENET_TIMER1` bzw. `ENET_TIMER2`) @nxp_imxrt1170_refman[S. 1426]; einen internen Pfad, über den sich einer der beiden Taktausgänge zusätzlich auf die jeweils andere Instanz routen ließe, sieht die Hardware nicht vor. Eine Instanz kann folglich nicht an die Clock der anderen angeschlossen werden - weshalb zwei separate Clocks konfiguriert werden müssen und weshalb überhaupt erst die in @testaufbau beschriebene bridge-interne Synchronisierung der beiden Timer notwendig wird.
 
 *Instanzabhängige Taktraten-Abfrage*\
 Da nun zwei unabhängige Taktgeber für die #acr("PTP")-Timer existieren, muss auch die von Zephyr bereitgestellte Taktraten-Abfrage instanzabhängig auflösen. Der #acr("PTP")-Clock-Treiber fragt darüber die Taktrate der jeweiligen ENET-Instanz ab und leitet daraus sowohl die Initialisierung des #acr("PTP")-Timers als auch die Umrechnung seiner Ticks in Nanosekunden ab. Die zuständige Funktion (`mcux_ccm_get_subsys_rate()`) gab jedoch für beide ENET-Instanzen bislang einheitlich die Taktrate derselben Instanz zurück, unabhängig davon, welche Instanz tatsächlich angefragt wurde. Im vorliegenden Aufbau sind beide Clocks zwar identisch konfiguriert, sodass dieser Fehler bislang folgenlos blieb - grundsätzlich hätte eine Instanz dadurch aber einen falschen Wert für ihre eigene Taktrate erhalten, wodurch sowohl die Initialisierung ihres #acr("PTP")-Timers als auch die spätere Rate-Korrektur auf einer falschen Zeitbasis beruht hätten. Um dies auszuschließen, wurde eine instanzabhängige Zuordnung ergänzt, sodass jede ENET-Instanz zuverlässig die Taktrate ihres eigenen #acr("PTP")-Timers zurückerhält.
 
 *Capture/Compare-Konfiguration der #acr("PTP")-Timer*\
-Die capture und compare funktion der timer wurde richtig gesetzt. Zudem wurde in den Callback die Funktion hinzugefügt, timestamp an einen Task zusenden, wenn ein bei einem Timer das Capture/Compare Event ausgelöst hat.
-Benötigt ist dies, um anschließend beide Timer zu Synchronisieren.
+Die Capture- und Compare-Funktion der Timer wurde korrekt konfiguriert. Zudem wurde der Callback um die Funktion ergänzt, den Zeitstempel an einen Task zu senden, sobald bei einem Timer das Capture/Compare-Event ausgelöst wurde.
+Benötigt wird dies, um anschließend beide Timer zu synchronisieren.
 
 Der #acr("PTP")-Timer der Gigabit-Instanz (`enet1g`) wurde so konfiguriert, dass er bei einem Compare-Event einen Puls über einen #acr("GPIO")-Pin ausgibt. Der #acr("PTP")-Timer der 10/100-Mbit-Instanz (`enet`) wurde so konfiguriert, dass er diesen Puls per Capture-Event einliest. In diesem Testaufbau liegt der #acr("gPTP")-Slave-Port der Bridge auf `enet1g`: Dessen Timer wird bereits durch das #acr("gPTP")-Protokoll selbst korrekt zur Grandmaster Clock synchronisiert und dient deshalb innerhalb der Bridge als Zeitreferenz. Der #acr("gPTP")-Master-Port liegt auf `enet`; sein Timer wird vom #acr("gPTP")-Stack hingegen nicht angefasst (siehe @testaufbau) und muss daher durch die in @bridge-sync-impl beschriebene bridge-interne Synchronisierung an den Timer von `enet1g` angeglichen werden. Diese Zuordnung wirkt auf den ersten Blick vertauscht, da im #acr("gPTP")-Protokoll selbst stets die Slave-Seite korrigiert wird -- hier ist es jedoch, rein bridge-intern, umgekehrt: Der bereits synchronisierte Slave-Port dient als Referenz für den noch unsynchronisierten Master-Port. Der Aufbau setzt dabei fest voraus, dass der #acr("gPTP")-Slave-Port stets auf `enet1g` liegt. Zusätzlich wurde die #acr-emph("ISR") erweitert:\
-Löst eines der beiden Events aus, wird der zugehörige Zeitstempel über eine Message-Queue an einen Task übergeben - Vorraussetzung dafür, dass beide Timer in Anschluss synchronisiert werden können.
+Löst eines der beiden Events aus, wird der zugehörige Zeitstempel über eine Message-Queue an einen Task übergeben - Voraussetzung dafür, dass beide Timer im Anschluss synchronisiert werden können.
 
 === Änderungen im gPTP-Subsystem
 *Synchronisationsaussetzer durch blockierte #acr("gPTP")-Ports*\
@@ -174,7 +174,7 @@ Damit diese Umleitung tatsächlich wirkt, muss zusätzlich eine Anpassung in der
 #note[Die HAL Änderungen sind hier schwer zu verstehen. Vielleicht komplett entfernen oder in den Grundlagen erklären.]
 
 === Empfangspfad: Ring-Bedienung, Verkehrsklasse und Pufferreservierung
-Der #acr("CBS") schützt ausschließlich die Senderichtung. In dem in Kapitel "Tests" beschriebenen Lastszenario trifft die Nutzlast die Bridge aber am Eingang. Daher müseen drei weitere Engpässe auf dem Empfangspfad beseitigt werden.
+Der #acr("CBS") schützt ausschließlich die Senderichtung. In dem in Kapitel "Tests" beschriebenen Lastszenario trifft die Nutzlast die Bridge aber am Eingang. Daher müssen drei weitere Engpässe auf dem Empfangspfad beseitigt werden.
 
 *Verschränkte Bedienung beider Empfangs-Ringe*\
 Der Empfangs-Task des Treibers bediente bislang ausschließlich Ring 0. Ring 1 blieb dabei vollständig unberücksichtigt. Mit dem zweiten Ring muss der Task nun sicherstellen, dass auch dessen Frames abgeholt werden. Dies geschieht durch abwechselndes Auslesen. Der Task liest im Wechsel ein Frame aus Ring 1 und eines aus Ring 0, bis beide Ringe leer sind (siehe @lst:rx-ring-interleave). Damit ist die Wartezeit eines #acr("gPTP")-Frames unabhängig von der Last auf höchstens ein Ring-0-Frame begrenzt. Instanzen ohne AVB-Ring verhalten sich unverändert.
@@ -247,7 +247,7 @@ Die Reihenfolge wurde deshalb umgekehrt. Der Frame wird zuerst in den ohnehin vo
       + " net_pkt_write(pkt, data->rx_frame_buf, frame_length);",
     width: 100%,
   ),
-  caption: [Prioritybased Allokation der Empfangspuffer],
+  caption: [Prioritätsbasierte Allokation der Empfangspuffer],
 ) <lst:rx-classify-before-alloc>
 
 Bewusst ist dieser Pool nicht an den AVB-Ring gekoppelt, sondern an das Vorhandensein einer #acr("PTP")-Clock: Die 10/100-Mbit-Instanz besitzt keinen zweiten Ring, trägt im Testaufbau aber den #acr("gPTP")-Verkehr zum Endpoint und benötigt denselben Schutz. Ein gesonderter Freigabepfad ist nicht nötig, da sowohl das Paket als auch seine Datenpuffer ihre Herkunft selbst vermerken und beim Freigeben automatisch in den reservierten Pool zurückkehren.

@@ -5,13 +5,13 @@
 #note[Einführung in die Tests. Beginnend mit Basis Validierung, über Bridge-Kette bis zur Netzwerklast. Optional auch noch Systemlast]
 *Tests*:
 
-- Testaufbau wo die Clock mehrere Stunden läuft -> Um eine Langzeitstabilität analysieren zukönnen.
-  - gemessen wird: PPS-Signal üebr 6H, es werden logs aufgezeichnet, dabei wird der
-  - Zweites, vom PPS-Offset unabhängiges Erfolgskriterium (siehe @nachweis-ressourcenstabilitaet): die MIB- und Treiber-Zähler (u. a. `alloc_fail_ptp`) müssen über die gesamte Laufzeit stabil bleiben bzw. bei null verharren.
+- Testaufbau wo die Clock mehrere Stunden läuft -> Um eine Langzeitstabilität analysieren zu können.
+  - gemessen wird: PPS-Signal über 6H, es werden logs aufgezeichnet, dabei wird der
+  - Zweites, vom PPS-Offset unabhängiges Erfolgskriterium (siehe @nachweis-ressourcenstabilitaet): die Statistik- und Treiber-Zähler (u. a. `alloc_fail_ptp`) müssen über die gesamte Laufzeit stabil bleiben bzw. bei null verharren.
 
 - Simulierte Systemlast -> Um zu zeigen, dass die Synchronisierung auch unter Last funktioniert.
-  - Ein task der ständig etwas berechnet und somit die CPU last hochzieht.
-  - Die Clocks sollten weiterhin Synchron bleiben, da Zephyr die Tasks geschickt scheduled
+  - Ein Task, der ständig etwas berechnet und somit die CPU-Last hochzieht.
+  - Die Clocks sollten weiterhin synchron bleiben, da Zephyr die Tasks geschickt scheduled
 
 - Auseinanderlaufen von Clocks zeigen durch Zeitsynchronisierung (keine Syntonisierung)
 #pagebreak()
@@ -42,7 +42,7 @@ Neben der PPS-basierten Synchronisationsgenauigkeit wird im selben Lauf auch die
   caption: [ppb-Verlauf des internen Servos, Basisvalidierung Einzelbridge],
 ) <fig-basisvalidierung-rate-ratio>
 
-Im aufgezeichneten Lauf tritt genau ein `HARD_STEP` der Slave-Clock der Bridge auf ($t approx 5.7"s"$, siehe @fig-basisvalidierung-rate-ratio, danach schwingt der #acr("PI")-Regler bis $t approx 101.7"s"$ auf einen stabilen Wert um $84000"ppb"$ ein. Ab diesem Zeitpunkt verbleiben $908$ Proben für die Allan-Abweichung nach @nachweis-rateratio. Aus den gesammelten Daten lässt sich $sigma_y (tau) = 32.4"ppb"$ definieren. Dieser Wert liegt deutlich innerhalb der geforderten $0.1$ #acr("ppm") ($100"ppb"$), womit die Anforderung als erfüllt gilt.
+Im aufgezeichneten Lauf tritt genau ein `HARD_STEP` der Slave-Clock der Bridge auf ($t approx 5.7"s"$, siehe @fig-basisvalidierung-rate-ratio). Danach schwingt der #acr("PI")-Regler bis $t approx 101.7"s"$ auf einen stabilen Wert um $84000"ppb"$ ein. Ab diesem Zeitpunkt verbleiben $908$ Proben für die Allan-Abweichung nach @nachweis-rateratio. Aus den gesammelten Daten lässt sich $sigma_y (tau) = 32.4"ppb"$ definieren. Dieser Wert liegt deutlich innerhalb der geforderten $0.1$ #acr("ppm") ($100"ppb"$), womit die Anforderung als erfüllt gilt.
 
 Als unabhängige Plausibilisierung wird das geloggte `phase_error` (Slave- $minus$ Master-Zeitstempel) gegen den zeitgleich per PPS gemessenen Hop-Offset zwischen Master- und Slave-Port desselben Laufs verglichen. Über $762$ überlappende Segmente weichen beide Größen im Mittel um nur $32.7"ns"$ voneinander ab, bei einer Streuung von $62.6"ns"$. Beide Messverfahren stützen sich damit gegenseitig.
 
@@ -113,7 +113,7 @@ Dazu passt, dass stellenweise gar keine gültigen Flanken mehr erfasst wurden. D
 Die Gegenprobe bestätigt die Ursache. Nach dem Abschalten der Last bei $t approx 910"s"$ fangen sich alle drei Messpunkte innerhalb weniger Perioden wieder und kehren in ihr ursprüngliches Band zurück, in dem sie bis zum Ende der Messung verbleiben.
 
 === Ergebnisse in Konfiguration B
-Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde dabei wieder in drei Stufen von je rund $300"s"$ gesteigert, allerdings beginnend von $15"Mbit/s"$ in $15"Mbit"$ schritten. Die am Port von Bridge 1 tatsächlich empfangene Datenrate lag dabei bei rund $14$, $28$ und $42"Mbit/s"$.
+Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde dabei wieder in drei Stufen von je rund $300"s"$ gesteigert, allerdings beginnend von $15"Mbit/s"$ in $15"Mbit/s"$-Schritten. Die am Port von Bridge 1 tatsächlich empfangene Datenrate lag dabei bei rund $14$, $28$ und $42"Mbit/s"$.
 
 #figure(
   image("../assets/Tests/pps_offset_netzwerklast_cbs.png", width: 100%),
