@@ -2,5 +2,3 @@
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Evaluation
-
-== Auswirkung der PHY-Latenz-Asymmetrie
