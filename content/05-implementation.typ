@@ -19,7 +19,7 @@ Die Initialisierung der #acr("PTP")-Clock wurde angepasst. Der ursprüngliche Ze
       + "+rootCfg.mux = kCLOCK_ENET_TIMER2_ClockRoot_MuxSysPll1Div2;\n"
       + "+rootCfg.div = 20\n"
       + "+CLOCK_SetRootClock(kCLOCK_Root_Enet_Timer2, &rootCfg);",
-    width: 90%,
+    width: 100%,
   ),
   caption: [PTP-Clock Konfiguration],
 ) <lst:PTP-Clock_config>
@@ -50,18 +50,18 @@ Zum einen wird beim Registrieren eines neuen Callbacks in `gptp_send_sync()` gep
 #figure(
   diff-listing(
     "void gptp_send_sync(int port, struct net_pkt *pkt){\n"
-      + "+    if (sync_cb_registered[port - 1]) {\n"
-      + "+         if (sync_timestamp_cb[port - 1].pkt != pkt) {\n"
-      + "+              net_if_unregister_timestamp_cb(sync_timestamp_cb[port - 1];\n"
-      + "+              sync_cb_registered[port - 1] = false;\n"
-      + "+        }\n"
+      + "+ if (sync_cb_registered[port - 1]) {\n"
+      + "+    if (sync_timestamp_cb[port - 1].pkt != pkt) {\n"
+      + "+         net_if_unregister_timestamp_cb(sync_timestamp_cb[port - 1];\n"
+      + "+         sync_cb_registered[port - 1] = false;\n"
       + "+    }\n"
-      + "     if (!sync_cb_registered[port - 1]) {\n"
-      + "          net_if_register_timestamp_cb(&sync_timestamp_cb[port - 1], pkt, \n"
-      + "          net_pkt_iface(pkt),\n"
-      + "          gptp_sync_timestamp_callback);\n"
-      + "          sync_cb_registered[port - 1] = true;\n"
-      + "     }\n"
+      + "+ }\n"
+      + "   if (!sync_cb_registered[port - 1]) {\n"
+      + "     net_if_register_timestamp_cb(&sync_timestamp_cb[port - 1], pkt, \n"
+      + "        net_pkt_iface(pkt),\n"
+      + "        gptp_sync_timestamp_callback);\n"
+      + "     sync_cb_registered[port - 1] = true;\n"
+      + "   }\n"
       + "}\n",
     width: 100%,
   ),
@@ -103,10 +103,11 @@ Da das #acr("TLV")-Feld in Netz-Byte-Order übertragen wird, muss es vor der Wei
 
 #figure(
   diff-listing(
-    "-sync_rcv->rate_ratio = net_ntohl(fup->tlv.cumulative_scaled_rate_offset);\n"
+    "-sync_rcv->rate_ratio = net_ntohl(fup->
+     tlv.cumulative_scaled_rate_offset);\n\n"
       + "+int32_t signed_rate_offset = \n"
       + "+    (int32_t)net_ntohl(fup->tlv.cumulative_scaled_rate_offset);\n"
-      + "+sync_rcv->rate_ratio = (double)signed_rate_offset;\n"
+      + "+sync_rcv->rate_ratio = (double)signed_rate_offset;\n\n"
       + " sync_rcv->rate_ratio /= GPTP_POW2_41;\n"
       + " sync_rcv->rate_ratio += 1;",
     width: 100%,
@@ -120,26 +121,25 @@ Da die `rateRatio` unmittelbar in die Skalierung der `residence time` und damit 
 
 
 == Implementierung der Bridge Synchronisation <bridge-sync-impl>
-Das im Folgenden beschriebene Verfahren ist keine im Standard 802.1AS vorgesehene Funktion, sondern eine Board-spezifische Ergänzung, um das in @testaufbau beschriebene Problem zu lösen. Umgesetzt wird sie durch einen eigenen Task, der den Master-Port des Systems zum Slave-Port synchronisiert.
+Das im Folgenden beschriebene Verfahren ist keine im Standard 802.1AS vorgesehene Funktion, sondern eine Board-spezifische Ergänzung, um das in @testaufbau beschriebene Problem mit den unabhängigen PTP-Clocks zu lösen. Umgesetzt wird sie durch einen eigenen Task, der den Master-Port des Systems zum Slave-Port synchronisiert.
 
-In @board-anpassungen wurde bereits beschrieben, wie die Timer-Instanzen konfiguriert sind. Der Timer der `enet1g`-Instanz vergleicht dabei fortlaufend seinen aktuellen Zählerstand mit dem im Register `ENET_TCCRn` definierten Wert. Sobald es zum Sekundenrollover kommt, speichert dieser Timer seinen aktuellen Zählerstand in einem Register und versendet einen PPS-Impuls. Die `enet`-Instanz wiederum latcht ihren aktuellen Zählerstand, sobald sie das PPS-Signal per Capture-Event erfasst.
+In @board-anpassungen wurde bereits beschrieben, wie die Timer-Instanzen konfiguriert sind. Der Timer der `enet1g`-Instanz vergleicht dabei fortlaufend seinen aktuellen Zählerstand mit dem im Register `ENET_TCCRn` definierten Wert. Sobald es zum Sekundenrollover kommt, speichert dieser Timer seinen aktuellen Zählerstand in einem Register und versendet einen PPS-Impuls. Die `enet`-Instanz wiederum speichert ihren aktuellen Zählerstand, sobald sie das PPS-Signal per Capture-Event erfasst.
 Zusätzlich lösen beide Events einen Interrupt aus. Diese #acr("ISR") ermöglicht es, beide Hardware-Zeitstempel über eine Message-Queue an den Synchronisierungs-Task zu übergeben.
 Dieser Task übernimmt die eigentliche Regelung. Er sorgt dafür, dass sich die Master-Instanz an die Slave-Instanz synchronisiert.
 
-Der Task berechnet aus den beiden Zeitstempeln einen einfachen Phasenfehler (Slave- $minus$ Master-Timestamp). Überschreitet dieser Phasenfehler 500 ms, wird die Clock der Master-Instanz hart auf die von der Slave-Instanz bekannte Zeit gesetzt, anstatt sie über den #acr("PI")-Regler langsam anzunähern. Das verkürzt die Einschwingzeit erheblich, da die zu korrigierende Uhr in einem Schritt in die Nähe der Zielzeit gebracht wird - ein Vorteil vor allem dann, wenn ein Gerät neu in ein bereits laufendes System integriert wird und der anfängliche Offset dementsprechend groß ist. \
-Liegt der Phasenfehler innerhalb der Schwelle, wird stattdessen die Zählrate des Timers der Master-Instanz über einen #acr("PI")-Regler angepasst:
+Der Task berechnet aus den beiden Zeitstempeln einen einfachen Phasenfehler (Slave- $minus$ Master-Timestamp). Überschreitet dieser Phasenfehler 500 ms, wird die Clock der Master-Instanz hart auf die von der Slave-Instanz bekannte Zeit gesetzt, anstatt sie über den #acr("PI")-Regler langsam anzunähern. Das verkürzt die Einschwingzeit erheblich, da die zu korrigierende Uhr in einem Schritt in die Nähe der Zielzeit gebracht wird, ein Vorteil vor allem dann, wenn ein Gerät neu in ein bereits laufendes System integriert wird und der anfängliche Offset dementsprechend groß ist. Liegt der Phasenfehler innerhalb der Schwelle, wird stattdessen die Zählrate des Timers der Master-Instanz über einen #acr("PI")-Regler angepasst:
 Aus dem Phasenfehler berechnet der Regler eine Korrektur in #acr-emph("ppb"), mit der sich die Zählrate der Master-Instanz schrittweise an die der Slave-Instanz annähert.
 
 
-== Priorisierung der gPTP-Nachrichten unter Netzwerklast <impl-lastschutz>
-Die bisher beschriebenen Änderungen stellen sicher, dass die Synchronisierung in einem ansonsten unbelasteten Netz zuverlässig arbeitet. Sobald über denselben physischen Port zusätzlich Best-Effort-Nutzverkehr läuft, konkurriert dieser jedoch mit den #acr("gPTP")-Nachrichten um dieselben Ressourcen. Problematisch ist dabei weniger der Zeitstempel selbst, der auch bei einer verspäteten Nachricht korrekt bliebe, sondern dass die beteiligten Zustandsmaschinen nur ein enges Zeitfenster für dessen Eintreffen vorsehen. Wird dieses Fenster durch die Last überschritten, behandelt die Implementierung die Nachricht als verloren und verwirft sie. Genau hier entscheidet sich, ob die Bridge die in @normative-leistungsanforderungen geforderte Genauigkeit auch unter Last hält - und damit die in @anforderung-netzwerklast beschriebene Vorbedingung der #acr-emph("E2E")-Synchronisationsgenauigkeit erfüllt.
+== Priorisierung der gPTP-Nachrichten <impl-lastschutz>
+Die bisher beschriebenen Änderungen stellen sicher, dass die Synchronisierung in einem ansonsten unbelasteten Netz zuverlässig arbeitet. Sobald über denselben physischen Port zusätzlich Best-Effort-Nutzverkehr läuft, konkurriert dieser jedoch mit den #acr("gPTP")-Nachrichten um dieselben Ressourcen. Problematisch ist dabei weniger der Zeitstempel selbst, der auch bei einer verspäteten Nachricht korrekt bliebe, sondern dass die beteiligten Zustandsmaschinen nur ein enges Zeitfenster für dessen Eintreffen vorsehen. Wird dieses Fenster durch die Last überschritten, behandelt die Implementierung die Nachricht als verloren und verwirft sie. Genau hier entscheidet sich, ob die Bridge die in @normative-leistungsanforderungen geforderte Genauigkeit auch unter Last hält und damit die in @anforderung-netzwerklast beschriebene Vorbedingung der #acr-emph("E2E")-Synchronisationsgenauigkeit erfüllt.
 
-Der in @cbs beschriebene #acr("CBS") ist der dafür vorgesehene Mechanismus. Die von NXP bereitgestellte HAL macht ihn über `ENET_AVBConfigure()` zugänglich. Zephyrs ENET-Treiber nutzt diese Funktion allerdings nicht. Dieser betreibt für jede ENET-Instanz ausschließlich den Best-Effort-Ring 0, sodass sämtlicher Verkehr, #acr("gPTP") wie Nutzlast denselben Ring teilt. Die Anbindung des Shapers musste daher im Treiber selbst ergänzt werden.
+Der in @cbs beschriebene #acr("CBS") ist einer der dafür vorgesehene Mechanismus. Die von NXP bereitgestellte HAL macht ihn über `ENET_AVBConfigure()` zugänglich. Zephyrs ENET-Treiber nutzt diese Funktion allerdings nicht. Dieser betreibt für jede ENET-Instanz ausschließlich den Best-Effort-Ring 0, sodass sämtlicher Verkehr, #acr("gPTP") wie Nutzlast denselben Ring teilt. Die Anbindung des Shapers musste daher im Treiber selbst ergänzt werden.
 
 Der Shaper allein genügt jedoch nicht. Er reserviert ausschließlich die Sendebandbreite. Die Last trifft die Bridge in diesem Aufbau aber überwiegend am Eingang, also im Empfangspfad. Dort entscheidet vor allem eines, ob ein #acr("gPTP")-Frame überhaupt bis zum #acr("gPTP")-Stack gelangt. Ist im Moment seines Eintreffens noch Platz im Netzwerkpuffer? Die folgenden Unterabschnitte beschreiben deshalb drei aufeinander aufbauende Ebenen. Die Kennzeichnung der #acr("gPTP")-Nachrichten als eigene Verkehrsklasse, deren Bevorzugung auf dem Sendepfad durch den #acr("CBS") und deren Absicherung auf dem Empfangspfad.
 
 === Kennzeichnung der gPTP-Nachrichten
-Voraussetzung für jede Priorisierung ist, dass ein Frame überhaupt als zeitkritisch erkennbar ist. Wie in @cbs beschrieben, entscheidet dies der 3 Bit breite Priority-Code-Point im VLAN-Tag. Zephyrs #acr("gPTP")-Subsystem versendet seine Nachrichten jedoch grundsätzlich ungetaggt, was sie für die #acr("MAC")-Schicht ununterschiedbar von den Best-Effort-Verkehr macht.
+Je nach Hardware können die #acr("gPTP")-Nahrichten direkt im #acr("MAC") erkannt und Priorisiert werden. Mit der aktuellen Hardware ist dies leider nicht möglich, weshalb VLAN-Tags verwendet werden um die Nachirchten zu kennzeichnen. Wie in @cbs beschrieben, entscheidet dies der 3-Bit breite Priority-Code-Point im VLAN-Tag. Zephyrs #acr("gPTP")-Subsystem versendet seine Nachrichten jedoch grundsätzlich ungetaggt, was sie für die #acr("MAC")-Schicht ununterschiedbar von den Best-Effort-Verkehr macht.
 
 In der KConfig wurden daher die beiden Optionen `CONFIG_NET_GPTP_VLAN_TAG` und `CONFIG_NET_GPTP_VLAN_PRIORITY` ergänzt. Ist ein VLAN-Tag konfiguriert, aktiviert `gptp_add_port()` das #acr("VLAN") auf jedem als Port registrierten Interface. `setup_gptp_frame()` versieht alle ausgehenden #acr("gPTP")-Nachrichten mit diesem Tag und dem konfigurierten Priority-Code-Point (im Testaufbau der höchste Wert 7). Der übrige Verkehr auf demselben physischen Interface bleibt davon unberührt und weiterhin ungetaggt.
 
@@ -263,28 +263,30 @@ Bewusst ist dieser Pool nicht an den AVB-Ring gekoppelt, sondern an das Vorhande
     table.hline(),
     tab-h[Maßnahme], tab-h[Ebene], tab-h[Konfiguration],
     table.hline(stroke: 0.5pt),
-    tab-d[Prioritätskennzeichnung der gPTP-Frames per VLAN-Tag],
+    tab-d[Prioritätskennzeichnung über VLAN-Tags],
     tab-d[gPTP-Subsystem],
     tab-d[`NET_GPTP_VLAN_TAG`, `NET_GPTP_VLAN_PRIORITY`],
+    table.hline(stroke: 0.2pt + luma(80)),
 
-    tab-d[Kreditgeformter Sende-Ring (#acr("CBS"))],
+    tab-d[#acr("CBS") Sende-Ring],
     tab-d[MAC-Hardware, Treiber],
-    tab-d[`ETH_NXP_ENET_1G_AVB`, `..._IDLE_SLOPE`],
+    tab-d[`ETH_NXP_ENET_1G_AVB`, `ETH_NXP_ENET_IDLE_SLOPE`],
+    table.hline(stroke: 0.2pt + luma(80)),
 
-    tab-d[Verschränkte Bedienung beider Empfangs-Ringe],
+    tab-d[Abarbeitung beider Empfangs-Ringe],
     tab-d[Treiber],
     tab-d[an `ETH_NXP_ENET_1G_AVB` gekoppelt],
+    table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[Eigene Empfangs-Verkehrsklasse für gPTP],
     tab-d[Treiber, Netzwerkstack],
     tab-d[`NET_TC_RX_COUNT`, `NET_PRIORITY_IC`],
+    table.hline(stroke: 0.2pt + luma(80)),
 
-    tab-d[Reservierter Empfangs-Pufferpool für PTP],
+    tab-d[Reservierter Empfangs-Pufferpool für gPTP],
     tab-d[Treiber],
-    tab-d[`ETH_NXP_ENET_PTP_RX_PKTS`, `..._BUFS`],
+    tab-d[`ETH_NXP_ENET_PTP_RX_PKTS`, `ETH_NXP_ENET_PTP_RX_BUFS`],
     table.hline(),
   ),
   caption: [Maßnahmen zum Schutz der gPTP-Verkehrsklasse unter Netzwerklast],
 ) <tab-lastschutz-massnahmen>
-
-#note[Tabelle refactorn ]

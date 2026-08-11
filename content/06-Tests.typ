@@ -22,7 +22,6 @@ Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmast
 
 === Testaufbau
 Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge, als auch dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos (`ptp_bridge_servo`, siehe @bridge-sync-impl).
-#note[Datenerfassung mit UART ergänzen]
 
 === Ergebnisse
 
@@ -60,7 +59,7 @@ Anstelle der vollständigen Kette (Grandmaster $<->$ Bridge 1 $<->$ Bridge 2 $<-
 
 Als Lastgenerator kommt `zperf` zum Einsatz, ein in Zephyr eingebautes, shellgesteuertes Werkzeug zur Messung des Netzwerkdurchsatzes @zephyr_zperf. Der Grandmaster sendet dabei per #acr-emph("UDP") eine konstante Datenrate an einen auf Bridge 1 laufenden `zperf`-Server - über denselben physischen Port, über den auch die #acr("gPTP")-Nachrichten laufen. #acr-emph("UDP") wurde hier bewusst gegenüber #acr("TCP") bevorzugt, da dessen Congestion Control die tatsächlich angebotene Last variabel und damit für die Messung schwerer kontrollierbar macht. `zperf` erlaubt es stattdessen, eine feste Ziel-Bitrate vorzugeben und den tatsächlich erreichten Durchsatz sowie den Paketverlust getrennt auf Sender- und Empfängerseite auszuwerten.
 
-Zeitgleich läuft eine #acr-emph("PPS")-Messung am GM, Bridge (Slave und Master-Port) und Endpoint. Zusätzlich protokolliert Bridge 1 sekündlich die am belasteten Port tatsächlich empfangene Datenrate sowie den Anteil verworfener Rahmen, getrennt nach Nutzlast und #acr("gPTP")-Verkehr, sodass sich der Synchronisationsverlauf direkt der jeweils anliegenden Last gegenüberstellen lässt.
+Zeitgleich läuft eine #acr-emph("PPS")-Messung am GM, Bridge (Slave und Master-Port) und Endpoint. Zusätzlich protokolliert Bridge 1 sekündlich die am belasteten Port tatsächlich empfangene Datenrate sowie den Anteil verworfener Frames, getrennt nach Nutzlast und #acr("gPTP")-Verkehr, sodass sich der Synchronisationsverlauf direkt der jeweils anliegenden Last gegenüberstellen lässt.
 
 === Untersuchte Konfigurationen
 Verglichen werden zwei Softwarestände derselben Bridge, die sich ausschließlich in den Maßnahmen aus @tab-lastschutz-massnahmen unterscheiden:
@@ -79,18 +78,30 @@ Konfiguration A wurde über $1000"s"$ mit $1"KB"$ großen Paketen und einem stuf
     stroke: none,
     table.hline(),
     tab-h[Metrik], tab-h[Stufe 1], tab-h[Stufe 2], tab-h[Stufe 3],
-    table.hline(stroke: 0.5pt),
+    table.hline(stroke: 0.2pt + luma(80)),
     tab-d[Angebotene Rate], tab-d[5,00 Mbit/s], tab-d[10,00 Mbit/s], tab-d[15,00 Mbit/s],
+    table.hline(stroke: 0.2pt + luma(80)),
     tab-d[Laufzeit],
     tab-d[5,00 min (300 s)],
     tab-d[5,00 min (300 s)],
     tab-d[5,00 min (300 s)],
+    table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[Übertragene Pakete], tab-d[187.501], tab-d[375.001], tab-d[500.001],
+    table.hline(stroke: 0.2pt + luma(80)),
+
     tab-d[Empfangene Pakete], tab-d[187.500], tab-d[374.956], tab-d[399.253],
+    table.hline(stroke: 0.2pt + luma(80)),
+
     tab-d[Verlorene Pakete], tab-d[0], tab-d[44], tab-d[100.747],
+    table.hline(stroke: 0.2pt + luma(80)),
+
     tab-d[Paketverlust], tab-d[0,00 %], tab-d[0,01 %], tab-d[20,15 %],
+    table.hline(stroke: 0.2pt + luma(80)),
+
     tab-d[Effektiver Durchsatz], tab-d[5,00 Mbit/s], tab-d[10,00 Mbit/s], tab-d[10,64 Mbit/s],
+    table.hline(stroke: 0.2pt + luma(80)),
+
     tab-d[Jitter], tab-d[204 µs], tab-d[755 µs], tab-d[1,00 ms],
     table.hline(),
   ),
@@ -120,14 +131,14 @@ Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde
   caption: [PPS-Offset und Netzwerklast mit Priorisierung],
 ) <fig-pps-netzwerklast-cbs>
 
-@fig-pps-netzwerklast-cbs zeigt beide Größen über einer gemeinsamen Zeitachse. Entscheidend ist der Vergleich mit @fig-pps-netzwerklast-ohne-cbs, denn die Bridge steht hier unter deutlich höherer Last. Bereits die erste Stufe entspricht mit rund $14"Mbit/s"$ genau jener Rate, bei der die Synchronisation in Konfiguration A zusammenbrach, und die dritte liegt mit $42"Mbit/s"$ um den Faktor drei darüber. Der Nutzverkehr leidet entsprechend. Schon in der ersten Stufe verwirft die Bridge rund ein Drittel der eingehenden Pakete, in den beiden höheren Stufen etwa die Hälfte. Der Anteil verworfener #acr("gPTP")-Rahmen bleibt dabei über die gesamte Messdauer bei null. Genau die Trennung, die in Konfiguration A fehlte.
+@fig-pps-netzwerklast-cbs zeigt beide Größen über einer gemeinsamen Zeitachse. Entscheidend ist der Vergleich mit @fig-pps-netzwerklast-ohne-cbs, denn die Bridge steht hier unter deutlich höherer Last. Bereits die erste Stufe entspricht mit rund $14"Mbit/s"$ genau jener Rate, bei der die Synchronisation in Konfiguration A zusammenbrach, und die dritte liegt mit $42"Mbit/s"$ um den Faktor drei darüber. Der Nutzverkehr leidet entsprechend. Schon in der ersten Stufe verwirft die Bridge rund ein Drittel der eingehenden Pakete, in den beiden höheren Stufen etwa die Hälfte. Der Anteil verworfener #acr("gPTP")-Frames bleibt dabei über die gesamte Messdauer bei null. Genau die Trennung, die in Konfiguration A fehlte.
 
 Im Offset-Verlauf ist von alledem nichts zu sehen. Beide Bridge-1-Messpunkte verbleiben durchgehend in einem gemeinsamen Band von rund $60$ bis $230"ns"$, der Endpoint spiegelbildlich zwischen etwa $-80$ und $-300"ns"$. Die Lastwechsel bei $t approx 300"s"$ und $t approx 600"s"$ hinterlassen keine erkennbare Reaktion, und die mittleren Abweichungen zum Grandmaster liegen mit $116$, $145$ und $156"ns"$ sogar leicht unter denen der ungestörten Phase aus @fig-pps-netzwerklast-ohne-cbs. Vor allem aber ist die Messreihe lückenlos. Es fehlen keine #acr-emph("PPS")-Flanken, und der Offset bleibt über die gesamten $1000"s"$ in demselben Band, statt wie in Konfiguration A über die Sekundengrenze hinaus wegzulaufen.
 
 === Vergleich und Einordnung
 Der gemessene Unterschied ist dabei nicht dem #acr("CBS") zuzuschreiben. Der Shaper regelt ausschließlich die Senderichtung, die Last trifft die Bridge hier aber am Eingang. Ausschlaggebend sind deshalb die empfangsseitigen Maßnahmen aus @impl-lastschutz, insbesondere der reservierte Pufferpool: Ohne ihn teilen sich Nutzlast und #acr("gPTP")-Nachrichten denselben Speicher, und die Bridge verwirft unter Last beide gleichermaßen. Da die Maßnahmen aus @tab-lastschutz-massnahmen erst in ihrer Kombination greifen, sind sie bewusst nicht einzeln bewertet worden.
 
-Damit ist erreicht, was eine Time-Aware Bridge leisten muss. Gefordert ist nicht, dass der Nutzdatendurchsatz unter Last erhalten bleibt, sondern dass die Zeitsynchronisation es tut. In Konfiguration B verwirft die Bridge bei $42"Mbit/s"$ rund die Hälfte des eingehenden Nutzverkehrs, keinen einzigen #acr("gPTP")-Rahmen, und der Offset bleibt unverändert innerhalb der geforderten Grenzen. Die Degradation trifft ausschließlich die unkritische Verkehrsklasse, während in Konfiguration A beide betroffen sind und damit genau die Funktion ausfällt, die den Zweck der Bridge ausmacht.
+Damit ist erreicht, was eine Time-Aware Bridge leisten muss. Gefordert ist nicht, dass der Nutzdatendurchsatz unter Last erhalten bleibt, sondern dass die Zeitsynchronisation es tut. In Konfiguration B verwirft die Bridge bei $42"Mbit/s"$ rund die Hälfte des eingehenden Nutzverkehrs, keinen einzigen #acr("gPTP")-Frames, und der Offset bleibt unverändert innerhalb der geforderten Grenzen. Die Degradation trifft ausschließlich die unkritische Verkehrsklasse, während in Konfiguration A beide betroffen sind und damit genau die Funktion ausfällt, die den Zweck der Bridge ausmacht.
 
 === Ausblick
 Wie in @testaufbau beschrieben, verfügt nur der enet1g-Port über #acr("CBS")-Unterstützung. Die Last ließ sich deshalb nur in eine Richtung erzeugen und die Wirkung der Maßnahmen nur an diesem einen Port beobachten. Eine aussagekräftigere Auswertung des Verhaltens unter Netzlast, insbesondere in beide Richtungen und über mehrere Hops hinweg, setzt daher Hardware voraus, die die betrachteten #acr("TSN")-Mechanismen auf allen Ports bereitstellt.

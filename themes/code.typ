@@ -173,7 +173,7 @@
 
   align(center)[
     #grid(
-      columns: (1.6em, width),
+      columns: (1.3em, width - 1.3em - 0.8em),
       column-gutter: 0.8em,
       align: (right + top, left + top),
 
