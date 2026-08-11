@@ -23,7 +23,7 @@
   "MAC": ("Media-Access-Control",),
   "PHY": ("Physical-Layer", "Physical-Layer-Bausteine"),
   "SFD": ("Start Frame Delimiter",),
-  "RTOS": ("Echtzeitbetriebssystem", "Echtzeitbetriebssysteme"),
+  "RTOS": ("Real-Time Operating System", "Echtzeitbetriebssysteme"),
   "BTCA": ("best timeTransmitter clock algorithm",),
   "GM": ("Grandmaster Clock",),
   "ISR": ("Interrupt-Service-Routine", "Interrupt-Service-Routinen"),
@@ -65,14 +65,14 @@
 
 // #set page("a4", background: if isDraft { rotate(24deg, text(150pt, fill: rgb("dedede66"))[*DRAFT*]) })
 
-// First page: task assignment (placeholder). For multi-page PDFs add further
-// #image(...) with page: 2, page: 3 ... or remove this block entirely.
-#[
-  #set page("a4", margin: 0pt, background: none)
-  #image("assets/aufgabenstellung.svg", width: 100%, height: 100%)
-]
-
+// Official cover sheet (Deckblatt), supplied as a ready-made PDF
+#set page("a4", margin: 0pt)
+#image("Thesis-Bachelor-Deckblatt.pdf", width: 100%, height: 100%)
 #openright()
+
+// Cover page
+// #include "common/cover.typ"
+// #openright()
 
 #set page("a4", margin: bodyMargin)
 #set text(size: 12pt)
@@ -82,9 +82,7 @@
 #include "common/declaration.typ"
 #openright()
 
-// Cover page
-#include "common/cover.typ"
-#openright()
+
 
 // Start page numbering
 #set page(numbering: "i", margin: bodyMargin, footer: page-footer("i"))
@@ -241,12 +239,13 @@
 ]
 
 #include "content/01-introduction.typ"
-#include "content/02-foundations.typ"
-#include "content/03-analysis-and-design.typ"
-#include "content/04-implementation.typ"
-#include "content/05-Tests.typ"
-#include "content/06-Evaluation.typ"
-#include "content/07-conclusion-and-outlook.typ"
+#include "content/02-state-of-the-art.typ"
+#include "content/03-foundations.typ"
+#include "content/04-analysis-and-design.typ"
+#include "content/05-implementation.typ"
+#include "content/06-Tests.typ"
+#include "content/07-Evaluation.typ"
+#include "content/08-conclusion-and-outlook.typ"
 
 #openright()
 // In the bibliography the entries are neither body-text paragraphs (with a

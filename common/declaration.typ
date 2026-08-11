@@ -1,7 +1,19 @@
 #import "../meta.typ": *
 
-#let _months = ("Januar", "Februar", "März", "April", "Mai", "Juni",
-                 "Juli", "August", "September", "Oktober", "November", "Dezember")
+#let _months = (
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
+)
 #let _today = datetime.today()
 #let _currentDate = [Karlsruhe, #_today.day(). #_months.at(_today.month() - 1) #_today.year()]
 
@@ -46,5 +58,5 @@ Sämtliche Stellen der Arbeit, die aus der zitierten Literatur wörtlich überno
   [
     #line(length: 100%, stroke: (thickness: 1pt, dash: "dotted"))
     #align(center)[(#author)]
-  ]
+  ],
 )
