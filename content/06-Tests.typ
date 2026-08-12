@@ -2,26 +2,13 @@
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Tests
-#note[Einführung in die Tests. Beginnend mit Basis Validierung, über Bridge-Kette bis zur Netzwerklast. Optional auch noch Systemlast]
-*Tests*:
-
-- Testaufbau wo die Clock mehrere Stunden läuft -> Um eine Langzeitstabilität analysieren zu können.
-  - gemessen wird: PPS-Signal über 6H, es werden logs aufgezeichnet, dabei wird der
-  - Zweites, vom PPS-Offset unabhängiges Erfolgskriterium (siehe @nachweis-ressourcenstabilitaet): die Statistik- und Treiber-Zähler (u. a. `alloc_fail_ptp`) müssen über die gesamte Laufzeit stabil bleiben bzw. bei null verharren.
-
-- Simulierte Systemlast -> Um zu zeigen, dass die Synchronisierung auch unter Last funktioniert.
-  - Ein Task, der ständig etwas berechnet und somit die CPU-Last hochzieht.
-  - Die Clocks sollten weiterhin synchron bleiben, da Zephyr die Tasks geschickt scheduled
-
-- Auseinanderlaufen von Clocks zeigen durch Zeitsynchronisierung (keine Syntonisierung)
-#pagebreak()
 == Basisvalidierung <basisvalidierung>
 Um eine umfangreiche Validierung der Bridge durchführen zu können, müssen zunächst die Grundlagen validiert werden, auf denen die nachfolgenden Tests aufbauen.
 
 Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen sowohl die #acr-emph("E2E")-Synchronisationsgenauigkeit (@normative-leistungsanforderungen) als auch die rateRatio-Genauigkeit der bridge-internen Synchronisierung (@nachweis-rateratio) einhält.
 
 === Testaufbau
-Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge, als auch dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos (`ptp_bridge_servo`, siehe @bridge-sync-impl).
+Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos (`ptp_bridge_servo`, siehe @bridge-sync-impl).
 
 === Ergebnisse
 
@@ -41,13 +28,51 @@ Neben der PPS-basierten Synchronisationsgenauigkeit wird im selben Lauf auch die
   caption: [ppb-Verlauf des internen Servos, Basisvalidierung Einzelbridge],
 ) <fig-basisvalidierung-rate-ratio>
 
-Im aufgezeichneten Lauf tritt genau ein `HARD_STEP` der Slave-Clock der Bridge auf ($t approx 5.7"s"$, siehe @fig-basisvalidierung-rate-ratio). Danach schwingt der #acr("PI")-Regler bis $t approx 101.7"s"$ auf einen stabilen Wert um $84000"ppb"$ ein. Ab diesem Zeitpunkt verbleiben $908$ Proben für die Allan-Abweichung nach @nachweis-rateratio. Aus den gesammelten Daten lässt sich $sigma_y (tau) = 32.4"ppb"$ definieren. Dieser Wert liegt deutlich innerhalb der geforderten $0.1$ #acr("ppm") ($100"ppb"$), womit die Anforderung als erfüllt gilt.
+Im aufgezeichneten Lauf tritt genau ein `HARD_STEP` der Slave-Clock der Bridge auf ($t approx 5.7"s"$, siehe @fig-basisvalidierung-rate-ratio). Danach schwingt der #acr("PI")-Regler bis $t approx 101.7"s"$ auf einen stabilen Wert um $84000$#acr("ppb") ein. Ab diesem Zeitpunkt verbleiben $908$ Proben für die Allan-Abweichung nach @nachweis-rateratio. Aus den gesammelten Daten lässt sich $sigma_y (tau) = 32.4$#acr("ppb") definieren. Dieser Wert liegt deutlich innerhalb der geforderten $0.1$ #acr("ppm") ($100$#acr("ppb")), womit die Anforderung als erfüllt gilt.
 
 Als unabhängige Plausibilisierung wird das geloggte `phase_error` (Slave- $minus$ Master-Zeitstempel) gegen den zeitgleich per PPS gemessenen Hop-Offset zwischen Master- und Slave-Port desselben Laufs verglichen. Über $762$ überlappende Segmente weichen beide Größen im Mittel um nur $32.7"ns"$ voneinander ab, bei einer Streuung von $62.6"ns"$. Beide Messverfahren stützen sich damit gegenseitig.
 
-
 === Einordnung und Ausblick
 Beide Anforderungen sind für die Einzelbridge erfüllt. Die #acr-emph("E2E")-Synchronisationsgenauigkeit an allen drei Messpunkten und die rateRatio-Genauigkeit der bridge-internen Synchronisation. Damit ist die Grundlage gelegt, auf der die nachfolgenden Tests aufbauen.
+
+
+== Validierung über mehrere Hops <mehrhop-validierung>
+Die Basisvalidierung hat gezeigt, dass eine einzelne Bridge die geforderten Genauigkeiten einhält. Die geforderte #acr-emph("E2E")-Synchronisationsgenauigkeit von $<=1mu s$ bezieht sich allerdings auf eine Kette von bis zu sieben Hops. Jede zusätzliche Bridge kann dabei eigene Fehlerbeiträge mit sich bringen. Insbesondere die Ungenauigkeit ihrer `residence time`-Messung, die Restabweichung der bridge-internen Synchronisierung (@bridge-sync-impl) sowie die in @Ungenauigkeiten beschriebene #acr-emph("PHY")-Asymmetrie. Ob sich diese Beiträge über mehrere Hops hinweg unkritisch verhalten oder sich systematisch aufsummieren, lässt sich an einer Einzelbridge nicht beantworten.
+
+Ziel dieses Tests ist es daher nachzuweisen, dass die #acr("E2E")-Synchronisationsgenauigkeit auch bei der maximal aufbaubaren Kettenlänge eingehalten wird, und darüber hinaus sichtbar zu machen, wie sich der Offset mit jedem zusätzlichen Hop entwickelt.
+
+=== Testaufbau
+Um den Beitrag jeder einzelnen Bridge isolieren zu können, wird die Kette Bridge für Bridge erweitert. Ausgehend von der bereits in @basisvalidierung vermessenen Konfiguration wird pro Ausbaustufe eine weitere Bridge zwischen die letzte Bridge und den Endpoint geschaltet, bis alle drei zur Verfügung stehenden Bridges Teil der Kette sind. @tab-mehrhop-stufen fasst die daraus resultierenden Ausbaustufen zusammen.
+
+#figure(
+  table(
+    columns: (1fr, 3fr, 0.5fr),
+    align: (left, left, left),
+    stroke: none,
+    table.hline(),
+    tab-h[Stufe], tab-h[Kette], tab-h[Hops],
+    table.hline(stroke: 0.5pt),
+    tab-d[1], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Endpoint], tab-d[2],
+    table.hline(stroke: 0.2pt + luma(80)),
+    tab-d[2], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Endpoint], tab-d[3],
+    table.hline(stroke: 0.2pt + luma(80)),
+    tab-d[3], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Bridge 3 $<->$ Endpoint], tab-d[4],
+    table.hline(),
+  ),
+  caption: [Abstufung der Kettenvalidierung],
+) <tab-mehrhop-stufen>
+
+#note[Konkrete Kanalbelegung je Stufe ergänzen. Probe 2 und 3 immer an die letzte Bridge. Probe 1 bleibt immer GM (Referenz) und Probe 4 Endpoint.]
+
+Alle Läufe finden unter denselben Idealbedingungen wie in @basisvalidierung statt. Damit bleibt die Kettenlänge die einzige Variable.
+
+=== Ergebnisse
+
+#note[Je Ausbaustufe. Analog zum Netzlasttest auswerten.]
+
+=== Einordnung und Ausblick
+
+#note[Zusammenfassen, ob die #acr("E2E")-Anforderung über alle Ausbaustufen erfüllt bleibt und wie sich der Fehler pro Hop verhält. Anschließend überleiten zum Lasttest, der dieselbe Anforderung unter Netzwerklast prüft.]
 
 == Simulierte Netzwerklast <netzwerklast-test>
 Das eigentliche Versprechen einer Time-Aware Bridge im Sinne von #acr("TSN") besteht nicht nur darin, unter Idealbedingungen synchron zu bleiben, sondern insbesondere auch dann, wenn dieselbe physische Verbindung gleichzeitig von Best-Effort-Nutzverkehr belegt wird. Die bisherigen Messungen wurden hingegen ausschließlich in einem ansonsten unbelasteten Netz durchgeführt. Der nachfolgende Test prüft deshalb die in @anforderung-netzwerklast begründete Vorbedingung unter definiert erzeugter Hintergrundlast.
@@ -64,7 +89,7 @@ Zeitgleich läuft eine #acr-emph("PPS")-Messung am GM, Bridge (Slave und Master-
 === Untersuchte Konfigurationen
 Verglichen werden zwei Softwarestände derselben Bridge, die sich ausschließlich in den Maßnahmen aus @tab-lastschutz-massnahmen unterscheiden:
 
-*Konfiguration A (Ausgangszustand)* verwendet den unveränderten ENET-Treiber und mit dem Änderungen aus @bridge-sync-impl und @anpassungen-in-zephyr. #acr("gPTP")-Nachrichten sind nicht als eigene Verkehrsklasse gekennzeichnet, teilen sich den Best-Effort-Sende-Ring mit der Nutzlast und werden aus demselben globalen Empfangs-Pufferpool bedient.
+*Konfiguration A (Ausgangszustand)* verwendet den unveränderten ENET-Treiber mit den Änderungen aus @bridge-sync-impl und @anpassungen-in-zephyr. #acr("gPTP")-Nachrichten sind nicht als eigene Verkehrsklasse gekennzeichnet, teilen sich den Best-Effort-Sende-Ring mit der Nutzlast und werden aus demselben globalen Empfangs-Pufferpool bedient.
 
 *Konfiguration B* aktiviert sämtliche Maßnahmen aus @tab-lastschutz-massnahmen: VLAN-Kennzeichnung der #acr("gPTP")-Nachrichten, den  #acr("CBS"), die verschränkte Bedienung beider Empfangs-Ringe, die eigene Empfangs-Verkehrsklasse sowie den reservierten Empfangs-Pufferpool. Alle übrigen Einstellungen sind in beiden Konfigurationen identisch.
 
@@ -124,7 +149,7 @@ Dazu passt, dass stellenweise gar keine gültigen Flanken mehr erfasst wurden. D
 Die Gegenprobe bestätigt die Ursache. Nach dem Abschalten der Last bei $t approx 910"s"$ fangen sich alle drei Messpunkte innerhalb weniger Perioden wieder und kehren in ihr ursprüngliches Band zurück, in dem sie bis zum Ende der Messung verbleiben.
 
 === Ergebnisse in Konfiguration B
-Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde dabei wieder in drei Stufen von je rund $300"s"$ gesteigert, allerdings beginnend von $15"Mbit/s"$ in $15"Mbit/s"$-Schritten. Die am Port von Bridge 1 tatsächlich empfangene Datenrate lag dabei bei rund $14$, $28$ und $42"Mbit/s"$.
+Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde dabei wieder in drei Stufen von je rund $300"s"$ gesteigert, allerdings beginnend bei $15"Mbit/s"$ in $15"Mbit/s"$-Schritten. Die am Port von Bridge 1 tatsächlich empfangene Datenrate lag dabei bei rund $14$, $28$ und $42"Mbit/s"$.
 
 #figure(
   image("../assets/Tests/pps_offset_netzwerklast_cbs.png", width: 100%),
@@ -138,7 +163,7 @@ Im Offset-Verlauf ist von alledem nichts zu sehen. Beide Bridge-1-Messpunkte ver
 === Vergleich und Einordnung
 Der gemessene Unterschied ist dabei nicht dem #acr("CBS") zuzuschreiben. Der Shaper regelt ausschließlich die Senderichtung, die Last trifft die Bridge hier aber am Eingang. Ausschlaggebend sind deshalb die empfangsseitigen Maßnahmen aus @impl-lastschutz, insbesondere der reservierte Pufferpool: Ohne ihn teilen sich Nutzlast und #acr("gPTP")-Nachrichten denselben Speicher, und die Bridge verwirft unter Last beide gleichermaßen. Da die Maßnahmen aus @tab-lastschutz-massnahmen erst in ihrer Kombination greifen, sind sie bewusst nicht einzeln bewertet worden.
 
-Damit ist erreicht, was eine Time-Aware Bridge leisten muss. Gefordert ist nicht, dass der Nutzdatendurchsatz unter Last erhalten bleibt, sondern dass die Zeitsynchronisation es tut. In Konfiguration B verwirft die Bridge bei $42"Mbit/s"$ rund die Hälfte des eingehenden Nutzverkehrs, keinen einzigen #acr("gPTP")-Frames, und der Offset bleibt unverändert innerhalb der geforderten Grenzen. Die Degradation trifft ausschließlich die unkritische Verkehrsklasse, während in Konfiguration A beide betroffen sind und damit genau die Funktion ausfällt, die den Zweck der Bridge ausmacht.
+Damit ist erreicht, was eine Time-Aware Bridge leisten muss. Gefordert ist nicht, dass der Nutzdatendurchsatz unter Last erhalten bleibt, sondern dass die Zeitsynchronisation es tut. In Konfiguration B verwirft die Bridge bei $42"Mbit/s"$ rund die Hälfte des eingehenden Nutzverkehrs, aber keinen einzigen #acr("gPTP")-Frame, und der Offset bleibt unverändert innerhalb der geforderten Grenzen. Die Degradation trifft ausschließlich die unkritische Verkehrsklasse, während in Konfiguration A beide betroffen sind und damit genau die Funktion ausfällt, die den Zweck der Bridge ausmacht.
 
 === Ausblick
 Wie in @testaufbau beschrieben, verfügt nur der enet1g-Port über #acr("CBS")-Unterstützung. Die Last ließ sich deshalb nur in eine Richtung erzeugen und die Wirkung der Maßnahmen nur an diesem einen Port beobachten. Eine aussagekräftigere Auswertung des Verhaltens unter Netzlast, insbesondere in beide Richtungen und über mehrere Hops hinweg, setzt daher Hardware voraus, die die betrachteten #acr("TSN")-Mechanismen auf allen Ports bereitstellt.
