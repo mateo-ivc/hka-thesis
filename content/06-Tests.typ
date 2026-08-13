@@ -5,7 +5,7 @@
 == Basisvalidierung <basisvalidierung>
 Um eine umfangreiche Validierung der Bridge durchführen zu können, müssen zunächst die Grundlagen validiert werden, auf denen die nachfolgenden Tests aufbauen.
 
-Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen sowohl die #acr-emph("E2E")-Synchronisationsgenauigkeit (@normative-leistungsanforderungen) als auch die rateRatio-Genauigkeit der bridge-internen Synchronisierung (@nachweis-rateratio) einhält.
+Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen sowohl die #acr-emph("E2E")-Synchronisationsgenauigkeit (@normative-leistungsanforderungen) als auch die rateRatio-Genauigkeit der bridge-internen Synchronisierung (@nachweis-rateratio) einhält. Darüber hinaus wird derselbe Lauf genutzt, um die `residence time` der Bridge zu vermessen und daraus zu beziffern, welchen Anteil am zulässigen Gesamtfehler die bridge-interne Synchronisierung tatsächlich beansprucht.
 
 === Testaufbau
 Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos (`ptp_bridge_servo`, siehe @bridge-sync-impl).
@@ -19,21 +19,34 @@ Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kan
 
 Alle drei Messpunkte erreichen ihren eingeschwungenen Zustand $t_"set"$ recht früh im Lauf. Der Slave-Port der Bridge bei Segment $9$, Master-Port der Bridge bei Segment $31$ und der Endpoint bei Segment $69$. Danach verbleiben diese durchgehend innerhalb des $1mu s$-Toleranzbands. Die Anforderung ist damit an allen drei Messpunkten erfüllt. Vor dem jeweiligen $t_"set"$ treten vereinzelte PPS-Ausfälle auf (z. B. sechs aufeinanderfolgende fehlende Segmente am Slave-Port zu Beginn), die sich mit dem Einrasten der Synchronisierung erklären und nicht mehr in den Nachweis eingehen.
 
-Die Boxplots in @fig-basisvalidierung-boxplot beziehen sich auf das jeweils gültige Fenster ab $t_"set"$. Median und Interquartilsabstand (die mittleren 50 % der Proben) liegen am Slave-Port bei $141.8"ns"$ bzw. $47.4"ns"$, am Master-Port bei $177.8"ns"$ bzw. $55.7"ns"$ und am Endpoint bei $-114.7"ns"$ bzw. $65.5"ns"$. An allen drei Messpunkten liegen sowohl der Median als auch die gesamte Box damit deutlich innerhalb des $1mu s$-Toleranzbands.
+Die Boxplots in @fig-basisvalidierung-boxplot beziehen sich auf das jeweils gültige Fenster ab $t_"set"$. Median und Interquartilsabstand (die mittleren 50 % der Proben) liegen am Slave-Port bei $141"ns"$ bzw. $47"ns"$, am Master-Port bei $177"ns"$ bzw. $55"ns"$ und am Endpoint bei $-114"ns"$ bzw. $65"ns"$. An allen drei Messpunkten liegen sowohl der Median als auch die gesamte Box damit deutlich innerhalb des $1mu s$-Toleranzbands.
 
-Neben der PPS-basierten Synchronisationsgenauigkeit wird im selben Lauf auch die rateRatio-Genauigkeit des bridge-internen Abgleichs nachgewiesen:
+Neben der PPS-basierten Synchronisationsgenauigkeit wird im selben Lauf auch die rateRatio-Genauigkeit des bridge-internen Synchronisierung nachgewiesen:
 
 #figure(
   image("../assets/Tests/rate_ratio_allan_basisvalidierung.png", width: 100%),
   caption: [ppb-Verlauf des internen Servos, Basisvalidierung Einzelbridge],
 ) <fig-basisvalidierung-rate-ratio>
 
-Im aufgezeichneten Lauf tritt genau ein `HARD_STEP` der Slave-Clock der Bridge auf ($t approx 5.7"s"$, siehe @fig-basisvalidierung-rate-ratio). Danach schwingt der #acr("PI")-Regler bis $t approx 101.7"s"$ auf einen stabilen Wert um $84000$#acr("ppb") ein. Ab diesem Zeitpunkt verbleiben $908$ Proben für die Allan-Abweichung nach @nachweis-rateratio. Aus den gesammelten Daten lässt sich $sigma_y (tau) = 32.4$#acr("ppb") definieren. Dieser Wert liegt deutlich innerhalb der geforderten $0.1$ #acr("ppm") ($100$#acr("ppb")), womit die Anforderung als erfüllt gilt.
+Im aufgezeichneten Lauf tritt genau ein `HARD_STEP` der Slave-Clock der Bridge auf ($t approx 5"s"$, siehe @fig-basisvalidierung-rate-ratio). Danach schwingt der #acr("PI")-Regler bis $t approx 125"s"$ auf einen stabilen Wert um $84000$#acr("ppb") ein. Ab diesem Zeitpunkt verbleiben $908$ Proben für die Allan-Abweichung nach @nachweis-rateratio. Aus den gesammelten Daten lässt sich für $tau = 1"s"$ (siehe @nachweis-rateratio) $sigma_y (tau) =$23,3214$$#acr("ppb") bestimmen. Dieser Wert liegt deutlich innerhalb der geforderten $0,1$ #acr("ppm") ($100$#acr("ppb")), womit die Anforderung als erfüllt gilt.
 
-Als unabhängige Plausibilisierung wird das geloggte `phase_error` (Slave- $minus$ Master-Zeitstempel) gegen den zeitgleich per PPS gemessenen Hop-Offset zwischen Master- und Slave-Port desselben Laufs verglichen. Über $762$ überlappende Segmente weichen beide Größen im Mittel um nur $32.7"ns"$ voneinander ab, bei einer Streuung von $62.6"ns"$. Beide Messverfahren stützen sich damit gegenseitig.
+Als unabhängige Plausibilisierung wird das geloggte `phase_error` (Slave- $minus$ Master-Zeitstempel) gegen den zeitgleich per PPS gemessenen Hop-Offset zwischen Master- und Slave-Port desselben Laufs verglichen. Über $762$ überlappende Segmente weichen beide Größen im Mittel um nur $32.7"ns"$ voneinander ab, bei einer Streuung von $62,6"ns"$. Beide Messverfahren stützen sich damit gegenseitig.
+
+Über die reine Einhaltung der Grenzwerte hinaus erlaubt derselbe Lauf, den Beitrag der bridge-internen Synchronisierung zum Gesamtfehler zu beziffern. Maßgeblich dafür ist die `residence time`: Sie wird nach @sync-mechanism als Differenz $t_s - t_r$ gebildet, und ihre beiden Zeitstempel entstehen auf verschiedenen Clocks. $t_r$ auf der Clock des Slave-Ports und $t_s$ auf der des Master-Ports. Jede Abweichung zwischen diesen beiden Clocks geht damit unmittelbar in das `correctionField` und über die gesamte Kette weiter.
+
+#figure(
+  image("../assets/Tests/bridge1_residenceTime.png", width: 100%),
+  caption: [Residence time und Phasenfehler der Bridge, Basisvalidierung Einzelbridge],
+) <fig-basisvalidierung-residence>
+
+Die Bridge benötigt im Durchschnitt $5,19"ms"$, um eine Sync-Nachricht weiterzuleiten. Bei einem Sync-Intervall von $125"ms"$ entspricht dies rund $4%$ des Intervalls. Für die Synchronisationsgenauigkeit ist die
+se vergleichsweise lange Verweilzeit zunächst unkritisch, da jede Sync-Nachricht ihren eigenen, individuell gemessenen Wert im `correctionField` mitführt und der Empfänger ihn vollständig herausrechnet. Entschei
+dend ist deshalb nicht die Höhe der `residence time`, sondern die Genauigkeit ihrer Messung, und genau diese wird durch die beiden Fehlerarten des internen Servos begrenzt.
+
+Ein Phasenfehler zwischen den beiden Clocks geht additiv in die `residence time` ($t_("res")$) ein, ein Frequenzfehler $epsilon$ dagegen skaliert mit ihr. Aus der gemessenen Verweilzeit lässt sich damit eine Schranke für den zulässigen Frequenzfehler herleiten. Damit der Frequenzanteil höchstens $1%$ des $1mu s$-Budgets aus @normative-leistungsanforderungen beansprucht, muss der  Frequenzfehler $epsilon < 1,93$ #acr("ppm") gelten. Die im selben Lauf bestimmte Allan-Abweichung von $28,3$ #acr("ppb") unterschreitet diese Schranke und trägt lediglich $0,15"ns"$ bei. Der Phasenfehler dominiert damit deutlich. Er liegt im Auswertungsfenster im Median bei $1"ns"$ und erreicht eine maximal Offset von $113"ns"$ bei einer Streuung von $35"ns"$. Beide Beiträge zusammen belegen im ungünstigsten Fall $113,1"ns"$ und damit $11,3%$ des zulässigen #acr-emph("E2E")-Budgets. Die bridge-interne Synchronisierung trägt damit nur einen geringen Anteil zu der in @fig-basisvalidierung-boxplot gezeigten Genauigkeit bei.
 
 === Einordnung und Ausblick
-Beide Anforderungen sind für die Einzelbridge erfüllt. Die #acr-emph("E2E")-Synchronisationsgenauigkeit an allen drei Messpunkten und die rateRatio-Genauigkeit der bridge-internen Synchronisation. Damit ist die Grundlage gelegt, auf der die nachfolgenden Tests aufbauen.
+Beide Anforderungen sind für die Einzelbridge erfüllt: die #acr-emph("E2E")-Synchronisationsgenauigkeit an allen drei Messpunkten und die rateRatio-Genauigkeit der bridge-internen Synchronisation. Die Fehlerbetrachtung ergänzt dieses Ergebnis um eine quantitative Einordnung, denn der gesamte Beitrag der bridge-internen Synchronisierung bleibt mit rund $11%$ des zulässigen Budgets deutlich unterhalb der Grenze und wird dabei vom Phasen-, nicht vom Frequenzfehler bestimmt. Damit ist die Grundlage gelegt, auf der die nachfolgenden Tests aufbauen.
 
 
 == Validierung über mehrere Hops <mehrhop-validierung>
@@ -52,8 +65,6 @@ Um den Beitrag jeder einzelnen Bridge isolieren zu können, wird die Kette Bridg
     table.hline(),
     tab-h[Stufe], tab-h[Kette], tab-h[Hops],
     table.hline(stroke: 0.5pt),
-    tab-d[1], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Endpoint], tab-d[2],
-    table.hline(stroke: 0.2pt + luma(80)),
     tab-d[2], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Endpoint], tab-d[3],
     table.hline(stroke: 0.2pt + luma(80)),
     tab-d[3], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Bridge 3 $<->$ Endpoint], tab-d[4],
@@ -68,11 +79,45 @@ Alle Läufe finden unter denselben Idealbedingungen wie in @basisvalidierung sta
 
 === Ergebnisse
 
-#note[Je Ausbaustufe. Analog zum Netzlasttest auswerten.]
+Analog zur Basisvalidierung wird je Ausbaustufe zunächst der zeitliche Offsetverlauf und anschließend die Verteilung im eingeschwungenen Zustand betrachtet. Die 1. Stufe mit nur einer Bridge wurde bereits in @basisvalidierung ausgewertet. Die folgenden beiden Abschnitte ergänzen Stufe 2 und Stufe 3. Kanal 2 und 3 des Oszilloskops liegen dabei jeweils an Slave- und Master-Port der letzten Bridge in der Kette an, Kanal 4 durchgehend am Endpoint. \ \ \ \ \ \ \ \
+
+*Stufe 2 (GM $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Endpoint)*
+
+#figure(
+  image("../assets/Tests/bridge2_pps_offset.png", width: 100%),
+  caption: [Stufe 2 - PPS-Offset zum Grandmaster über der Zeit],
+) <fig-mehrhop-stufe2-verlauf>
+
+Wie schon in der Basisvalidierung durchlaufen alle drei Messpunkte zu Beginn eine Einschwingphase. Die Messpunkte erreichen dabei ihren eingeschwungenen Zustand $t_"set"$ nicht gleichzeitig, spätestens jedoch bei Segment $45$ sind alle drei eingeschwungen. Danach verbleiben Slave- und Master-Port von Bridge 2 durchgehend in einem engen Band um den #acr("GM"), der Endpoint in einem dazu versetzten Band um rund $-290"ns"$.
+
+#figure(
+  image("../assets/Tests/Bridge2_boxplot.png", width: 100%),
+  caption: [Stufe 2 - PPS-Offset als Boxplot, eingeschwungener Zustand],
+) <fig-mehrhop-stufe2-boxplot>
+
+Im ausgewerteten Fenster ab $t_"set"$ liegen Median und Interquartilsabstand am Slave-Port von Bridge 2 bei $-5,8"ns"$ bzw. $58,3"ns"$ ($n=876$), am Master-Port bei $25,4"ns"$ bzw. $64,1"ns"$ ($n=840$) und am Endpoint bei $-288,0"ns"$ bzw. $70,7"ns"$ ($n=909$). Damit bleibt die #acr-emph("E2E")-Genauigkeit über drei Hops deutlich innerhalb des $1mu s$-Toleranzbands.
+\ \ \ \ \ \ \ \ \ \ \ \
+*Stufe 3 (GM $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Bridge 3 $<->$ Endpoint)*
+
+#figure(
+  image("../assets/Tests/bridge3_pps_offset.png", width: 100%),
+  caption: [Stufe 3 - PPS-Offset zum Grandmaster über der Zeit],
+) <fig-mehrhop-stufe3-verlauf>
+
+Die Einschwingphase fällt mit einem zusätzlichen Hop änlich zur Stufe 2 aus. Auch hier erreichen die drei Messpunkte $t_"set"$ nicht gleichzeitig. Der Slave-Port von Bridge 3 bereits bei Segment $6$, der Master-Port erst bei Segment $45$, spätestens jedoch bei Segment $60$ sind alle eingeschwungen. Danach verbleiben alle drei Messpunkte durchgehend in einem stabilen, gegenüber Stufe 2 leicht nach unten verschobenen Band, ohne erkennbare Lücken oder wiederkehrende Ausreißer über den restlichen Lauf.
+
+#figure(
+  image("../assets/Tests/bridge3_boxplot.png", width: 100%),
+  caption: [Stufe 3 - PPS-Offset als Boxplot, eingeschwungener Zustand],
+) <fig-mehrhop-stufe3-boxplot>
+
+Im eingeschwungenen Fenster liegen Median und Interquartilsabstand am Slave-Port von Bridge 3 bei $-153"ns"$ bzw. $75"ns"$, am Master-Port bei $-113"ns"$ bzw. $81"ns"$ und am Endpoint bei $-428"ns"$ bzw. $82"ns"$. Auch nach vier Hops bleibt die #acr-emph("E2E")-Genauigkeit damit klar innerhalb der geforderten $1mu s$.
 
 === Einordnung und Ausblick
 
-#note[Zusammenfassen, ob die #acr("E2E")-Anforderung über alle Ausbaustufen erfüllt bleibt und wie sich der Fehler pro Hop verhält. Anschließend überleiten zum Lasttest, der dieselbe Anforderung unter Netzwerklast prüft.]
+Über alle drei Ausbaustufen hinweg bleibt die #acr-emph("E2E")-Synchronisationsgenauigkeit zum Grandmaster am Endpoint durchgehend innerhalb des geforderten $1mu s$-Toleranzbands. $-114"ns"$ bei einem Hop (@basisvalidierung), $-288"ns"$ bei zwei Hops und $-428"ns"$ bei drei Hops. Der Zuwachs pro zusätzlichem Hop beträgt damit rund $173"ns"$ (Stufe 1 $->$ 2) und rund $141"ns"$ (Stufe 2 $->$ 3). Der Fehler wächst also weder unkontrolliert noch überlinear, sondern eher leicht sublinear, bei gleichzeitig nur moderat wachsender Streuung (Endpoint-IQR $65"ns"$, $70"ns"$, $82"ns"$). Für die drei tatsächlich aufgebauten Stufen ist die Bridge-Funktionalität im Sinne von Annex B.3 damit nachgewiesen. Eine abschließende Aussage über eine vollständige Kette von $7$ Hops lässt sich hier allerdings nicht treffen. Man erkennt einen deutlichen Abwärtstrend des Offsets, der bei drei Hops bereits rund $400"ns"$ Abweichung vom Grandmaster ergibt. Kommen  dazu noch weiteren vier Hops hinzu, lässt sich auf dieser Datenbasis nicht ausschließen, dass die geforderte $1mu s$-Grenze überschritten wird.
+
+Die vorliegenden Läufe fanden durchgehend unter denselben Idealbedingungen wie die Basisvalidierung statt. Der nachfolgende Abschnitt prüft, ob dieselbe #acr-emph("E2E")-Anforderung auch unter Netzwerklast eingehalten wird.
 
 == Simulierte Netzwerklast <netzwerklast-test>
 Das eigentliche Versprechen einer Time-Aware Bridge im Sinne von #acr("TSN") besteht nicht nur darin, unter Idealbedingungen synchron zu bleiben, sondern insbesondere auch dann, wenn dieselbe physische Verbindung gleichzeitig von Best-Effort-Nutzverkehr belegt wird. Die bisherigen Messungen wurden hingegen ausschließlich in einem ansonsten unbelasteten Netz durchgeführt. Der nachfolgende Test prüft deshalb die in @anforderung-netzwerklast begründete Vorbedingung unter definiert erzeugter Hintergrundlast.
@@ -138,9 +183,9 @@ Konfiguration A wurde über $1000"s"$ mit $1"KB"$ großen Paketen und einem stuf
   caption: [PPS-Offset und Netzwerklast ohne Priorisierung],
 ) <fig-pps-netzwerklast-ohne-cbs>
 
-@fig-pps-netzwerklast-ohne-cbs stellt beide Größen über einer gemeinsamen Zeitachse dar. Über die ersten beiden Laststufen verhält sich das System unauffällig: Die Bridge verarbeitet den eingehenden Verkehr nahezu vollständig, der Drop-Anteil liegt durchgehend bei null, und die drei Messpunkte verbleiben in einem engen, gemeinsamen Band - Slave- und Master-Port von Bridge 1 zwischen etwa $50$ und $250"ns"$, der Endpoint spiegelbildlich zwischen $-50$ und $-250"ns"$. Der Lastwechsel bei $t approx 300"s"$ hinterlässt im Offset-Verlauf keine erkennbare Spur. Eine einzelne Ausnahme bildet ein isoliertes Verlustereignis bei $t approx 475"s"$, das sich als schmaler Ausschlag im Drop-Anteil zeigt - es entspricht den $44$ in Stufe 2 verlorenen Paketen aus @tab-netzwerklast-durchsatz und beeinflusst den Offset nicht messbar.
+@fig-pps-netzwerklast-ohne-cbs stellt beide Größen über einer gemeinsamen Zeitachse dar. Über die ersten beiden Laststufen verhält sich das System unauffällig: Die Bridge verarbeitet den eingehenden Verkehr nahezu vollständig, der Drop-Anteil liegt durchgehend bei null, und die drei Messpunkte verbleiben in einem engen, gemeinsamen Band - Slave- und Master-Port von Bridge 1 zwischen etwa $50$ und $250"ns"$, der Endpoint spiegelbildlich zwischen $-50$ und $-250"ns"$. Der Lastwechsel bei $t approx 300"s"$ hinterlässt im Offset-Verlauf keine erkennbare Spur. Eine einzelne Ausnahme bildet ein isoliertes Verlustereignis bei $t approx 475"s"$, das sich als schmaler Ausschlag im Drop-Anteil zeigt. Es entspricht den $44$ in Stufe 2 verlorenen Paketen aus @tab-netzwerklast-durchsatz und beeinflusst den Offset nicht messbar.
 
-Mit dem Übergang in die dritte Laststufe bei $t approx 610"s"$ ändert sich das Bild schlagartig. Am Port von Bridge 1 kommen nun rund $14"Mbit/s"$ an, von denen die Bridge einen erheblichen Teil verwirft. Der Drop-Anteil schwankt für den Rest der Stufe zwischen etwa $30$ und annähernd $100"%"$ der jeweils anliegenden Rate und beträgt über die Stufe gemittelt die in @tab-netzwerklast-durchsatz ausgewiesenen $20.15"%"$. Zeitgleich verlässt der Offset aller drei Messpunkte sein bis dahin stabiles Band. Der zeitliche Zusammenfall von einsetzendem Paketverlust und ausbrechendem Offset ist der zentrale Befund dieses Laufs.
+Mit dem Übergang in die dritte Laststufe bei $t approx 610"s"$ ändert sich das Bild schlagartig. Am Port von Bridge 1 kommen nun rund $14"Mbit/s"$ an, von denen die Bridge einen erheblichen Teil verwirft. Der Drop-Anteil schwankt für den Rest der Stufe zwischen etwa $30$ und annähernd $100"%"$ der jeweils anliegenden Rate und beträgt über die Stufe gemittelt die in @tab-netzwerklast-durchsatz ausgewiesenen $20,15"%"$. Zeitgleich verlässt der Offset aller drei Messpunkte sein bis dahin stabiles Band. Der zeitliche Zusammenfall von einsetzendem Paketverlust und ausbrechendem Offset ist der zentrale Befund dieses Laufs.
 
 Die sichtbaren Ausschläge von rund $-930$ bis $+920"ns"$ geben dabei nicht die tatsächliche Abweichung wieder. Ein #acr-emph("PPS")-Signal ist ein reiner Sekundenpuls und trägt keine Information darüber, zu welcher Sekunde es gehört. Das Oszilloskop misst deshalb ausschließlich den Phasenversatz zweier Flanken zueinander, nicht den absoluten Zeitunterschied der dahinterliegenden Uhren. Liegen zwei Flanken dicht beieinander, während ihre Uhren mehrere Sekunden auseinanderliegen, bleibt dieser Anteil der Abweichung unsichtbar. Genau das ist hier der Fall. Die Messpunkte liegen auf dem Oszilloskop weiterhin innerhalb weniger hundert Nanosekunden, die zugehörigen Uhren unterscheiden sich zu diesem Zeitpunkt jedoch um Sekunden. Das scheinbar auf knapp $1mu s$ begrenzte Band ist damit eine Eigenschaft des Messverfahrens und nicht der Synchronisation.
 

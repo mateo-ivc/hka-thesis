@@ -9,15 +9,15 @@ Zephyrs #acr("gPTP")-Implementierung ist grundsätzlich für Endgeräte mit eine
 
 === Board-spezifische Änderungen (NXP i.MX RT) <board-anpassungen>
 *#acr("PTP")-Clock Konfiguration*\
-Die Initialisierung der #acr("PTP")-Clock wurde angepasst. Der ursprüngliche Zephyr-Code konfiguriert nur eine Clock für eine einzelne ENET-Instanz. Für die Bridge wurde eine zweite, identisch konfigurierte Clock für die zweite ENET-Instanz ergänzt. Beide Clocks werden aus `SYS_PLL1_DIV2` (geteilt durch 20) abgeleitet, was einer Taktfrequenz von $25"MHz"$ entspricht, und erfüllen damit die in @normative-leistungsanforderungen geforderte Granularität von $40n s$.
+Die Initialisierung der #acr("PTP")-Clock wurde angepasst. Der ursprüngliche Zephyr-Code konfiguriert nur eine Clock für eine einzelne ENET-Instanz. Für die Bridge wurde eine zweite, identisch konfigurierte Clock für die zweite ENET-Instanz ergänzt. Beide Clocks werden aus `SYS_PLL1_DIV2` (geteilt durch 4) abgeleitet, was einer Taktfrequenz von $125"MHz"$ entspricht, und erfüllen damit die in @normative-leistungsanforderungen geforderte Granularität von $40n s$ mit deutlichem Abstand ($8n s$).
 
 #figure(
   diff-listing(
     "rootCfg.mux = kCLOCK_ENET_TIMER1_ClockRoot_MuxSysPll1Div2;\n"
-      + "rootCfg.div = 20;\nCLOCK_SetRootClock(kCLOCK_Root_Enet_Timer1, &rootCfg);\n"
+      + "rootCfg.div = 4;\nCLOCK_SetRootClock(kCLOCK_Root_Enet_Timer1, &rootCfg);\n"
       + "\n"
       + "+rootCfg.mux = kCLOCK_ENET_TIMER2_ClockRoot_MuxSysPll1Div2;\n"
-      + "+rootCfg.div = 20\n"
+      + "+rootCfg.div = 4\n"
       + "+CLOCK_SetRootClock(kCLOCK_Root_Enet_Timer2, &rootCfg);",
     width: 100%,
   ),

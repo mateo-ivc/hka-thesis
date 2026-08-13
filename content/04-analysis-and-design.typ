@@ -59,7 +59,7 @@ Bei einer einzelnen Bridge genügt ein Lauf für beide Größen: Belegt man die 
 
 Sobald mehr als eine Bridge im System ist, reichen vier Kanäle nicht mehr aus, um die gesamte Kette gleichzeitig zu erfassen. Da die #acr-emph("E2E")-Synchronisationsgenauigkeit laut Standard aber kumulativ über die Kette gilt und der Testaufbau mit maximal vier Hops innerhalb der zulässigen sieben bleibt, wird die Kette in mehreren Läufen mit wechselnder Kanalbelegung durchgemessen. Die Kanäle für #acr("GM") und Endpoint bleiben dabei über alle Läufe fest belegt, sodass sich die Läufe über diese gemeinsame Referenz zusammenführen lassen. Im Vordergrund steht hier entsprechend der #acr("GM")-relative Offset.
 
-=== Nachweis der rateRatio-Genauigkeit <nachweis-rateratio>
+=== Nachweis der bridge-internen rateRatio-Genauigkeit <nachweis-rateratio>
 Die #acr("PPS")-Messung weist die #acr-emph("E2E")-Synchronisationsgenauigkeit nach, eignet sich aber nicht für den Nachweis der rateRatio-Genauigkeit aus @ieee8021as2025[B.2.4] - unter anderem gefordert für den internen Abgleich zwischen Master- und Slave-Instanz der Bridge (siehe @bridge-sync-impl). Da rateRatio eine Frequenzgröße ist, wird dieser Nachweis stattdessen über die Allan-Abweichung der geloggten rateRatio-Werte erbracht @allan1966statistics @riley2008frequencystability[13]. In dieser Arbeit wird dazu wie folgt vorgegangen:
 
 1. Einschwingzeit abwarten, damit sich der #acr("PI")-Regler auf einen stabilen Zustand einschwingen kann.
@@ -72,7 +72,7 @@ $
   sigma_y (tau) = sqrt(1/(2(M-1)) sum_(i=1)^(M-1) (y_(i+1) - y_i)^2)
 $
 
-Dabei ist $y_i = "rateRatio"_i - 1$ die fraktionale Frequenzabweichung des $i$-ten Messintervalls und $M$ die Anzahl der gemessenen Intervalle. Liegt die berechnete Allan-Abweichung $sigma_y (tau)$ innerhalb der geforderten 0,1 #acr("ppm"), gilt die Anforderung als erfüllt.
+Dabei ist $y_i = "rateRatio"_i - 1$ die fraktionale Frequenzabweichung des $i$-ten Messintervalls und $M$ die Anzahl der gemessenen Intervalle. Das Mittelungsintervall $tau$ ergibt sich aus der Messmethodik selbst. Durch die #acr("PPS")-Flanken folgt die Sekündliche aktualisierung der rateRatio des bridge-internen Servos. In dieser Arbeit wird deshalb durchgehend mit $tau = 1"s"$ gerechnet. Liegt die berechnete Allan-Abweichung $sigma_y (tau = 1"s")$ innerhalb der geforderten 0,1 #acr("ppm"), gilt die Anforderung als erfüllt.
 
 === Nachweis der Ressourcenstabilität <nachweis-ressourcenstabilitaet>
 Auch die in "Ressourcenstabilität" begründete Anforderung wird nicht über den PPS-Offset geprüft, sondern über zwei Zähler, die parallel zur Langzeitmessung sekündlich mitgeloggt werden. Die MAC-eigenen Statistikzähler (`rx_pkts`, `rx_ok`, `drop`, `crc`, `align`, `macerr`), die über `ENET_GetStatistics()` ausgelesen werden, sowie ein treiberinterner Zähler für fehlgeschlagene Pufferallokationen auf dem #acr("gPTP")-Empfangspfad (`alloc_fail_ptp`).
