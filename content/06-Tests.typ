@@ -117,7 +117,36 @@ Im eingeschwungenen Fenster liegen Median und Interquartilsabstand am Slave-Port
 
 Über alle drei Ausbaustufen hinweg bleibt die #acr-emph("E2E")-Synchronisationsgenauigkeit zum Grandmaster am Endpoint durchgehend innerhalb des geforderten $1mu s$-Toleranzbands. $-114"ns"$ bei einem Hop (@basisvalidierung), $-288"ns"$ bei zwei Hops und $-428"ns"$ bei drei Hops. Der Zuwachs pro zusätzlichem Hop beträgt damit rund $173"ns"$ (Stufe 1 $->$ 2) und rund $141"ns"$ (Stufe 2 $->$ 3). Der Fehler wächst also weder unkontrolliert noch überlinear, sondern eher leicht sublinear, bei gleichzeitig nur moderat wachsender Streuung (Endpoint-IQR $65"ns"$, $70"ns"$, $82"ns"$). Für die drei tatsächlich aufgebauten Stufen ist die Bridge-Funktionalität im Sinne von Annex B.3 damit nachgewiesen. Eine abschließende Aussage über eine vollständige Kette von $7$ Hops lässt sich hier allerdings nicht treffen. Man erkennt einen deutlichen Abwärtstrend des Offsets, der bei drei Hops bereits rund $400"ns"$ Abweichung vom Grandmaster ergibt. Kommen  dazu noch weiteren vier Hops hinzu, lässt sich auf dieser Datenbasis nicht ausschließen, dass die geforderte $1mu s$-Grenze überschritten wird.
 
-Die vorliegenden Läufe fanden durchgehend unter denselben Idealbedingungen wie die Basisvalidierung statt. Der nachfolgende Abschnitt prüft, ob dieselbe #acr-emph("E2E")-Anforderung auch unter Netzwerklast eingehalten wird.
+Die vorliegenden Läufe fanden durchgehend unter denselben Idealbedingungen wie die Basisvalidierung statt. Der nachfolgende Abschnitt prüft, ob dieselbe #acr-emph("E2E")-Anforderung auch über eine deutlich längere Messdauer hinweg eingehalten wird.
+
+== Langzeitmessung <langzeitmessung>
+Die bisherigen Läufe sind durch die Aufzeichnungslänge des Oszilloskops auf jeweils 1000 #acr("PPS")-Perioden begrenzt, also rund 16,6 Minuten. Damit lässt sich zwar die Synchronisationsgenauigkeit selbst, nicht aber ihre Stabilität über deutlich längere Zeiträume hinweg beurteilen. Ziel dieses Tests ist es deshalb, die vollständige Kette aus @mehrhop-validierung über mehrere Stunden hinweg zu beobachten und zu prüfen, ob die #acr-emph("E2E")-Synchronisationsgenauigkeit nach @normative-leistungsanforderungen auch über diesen Zeitraum durchgehend eingehalten wird.
+
+=== Testaufbau
+Der Aufbau entspricht Stufe 3 aus @mehrhop-validierung (#acr("GM") $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Bridge 3 $<->$ Endpoint). Da dem Oszilloskop nach @kanalbelegung nur vier Kanäle zur Verfügung stehen, bleiben Kanal 1 (#acr("GM"), Referenz) und Kanal 4 (Endpoint) für die gesamte Messdauer fest belegt, während die Kanäle 2 und 3 reihum an Slave- und Master-Port der jeweiligen Bridge angeschlossen werden. Jeder Einzellauf ist wie bisher auf 1000 #acr("PPS")-Perioden begrenzt. Nach jedem Durchlauf gibt es eine etwa 16 Minütige Pause, bevor die nächste Aufzeichnung losgeht. Die Langzeitmessung setzt sich deshalb aus zwölf Läufen zusammen und erstrecken sich insgesamt auf eine Zeit on ca. 6,5 Stunden.
+
+=== Ergebnisse
+
+#figure(
+  image("../assets/Tests/PPS-Offset-langzeit.png", width: 100%),
+  caption: [PPS-Offset zum Grandmaster über rund 6,5 Stunden],
+) <fig-langzeit-verlauf>
+
+@fig-langzeit-verlauf zeigt den Offset aller Messpunkte über die gesamte Messdauer. Der Endpoint (violett) ist in jedem der zwölf Läufe vertreten und verbleibt durchgehend in einem stabilen Band von etwa $-600$ bis $-150"ns"$, ohne dass zwischen dem ersten Lauf bei $t approx 0"h"$ und dem letzten bei $t approx 6,4"h"$ ein erkennbarer Trend sichtbar wird. Auch an den rotierenden Messpunkten der drei Bridges zeigt sich innerhalb der ihnen jeweils zugeordneten vier Läufe keine fortschreitende Verschiebung. Die Synchronisation blieb somit über die gesamten 6 Stunden erhalten. Zudem macht sich kein Drift bemerkbar, der sich erst über Stunden sichtbar macht.
+
+#figure(
+  image("../assets/Tests/boxplot_langzeit.png", width: 100%),
+  caption: [PPS-Offset als Boxplot über die gesamte Langzeitmessung],
+) <fig-langzeit-boxplot>
+
+@fig-langzeit-boxplot fasst dieselben Daten je Messpunkt über die gesamte Langzeitmessung als Boxplot zusammen. Median und Interquartilsabstand liegen am Slave- bzw. Master-Port von Bridge 1 bei $122,8"ns"$/$39,7"ns"$ und $155,6"ns"$/$45,6"ns"$, an Bridge 2 bei $-24,9"ns"$/$55,2"ns"$ und $7,2"ns"$/$63,4"ns"$, an Bridge 3 bei $-153,4"ns"$/$76,9"ns"$ und $-119,9"ns"$/$83,2"ns"$, und am Endpoint bei $-420,1"ns"$/$94,4"ns"$. Wie schon in @mehrhop-validierung wächst die Streuung mit jedem zusätzlichen Hop leicht an, bleibt aber selbst am Endpoint mit einem IQR von rund $94"ns"$ klein gegenüber dem $1mu s$-Toleranzband. Vereinzelte Ausreißer (rote Kreise) treten an allen Messpunkten auf, verlassen das Toleranzband jedoch nie und zählen damit nach "Statistische Auswertung" nicht als Verletzung der Anforderung.
+
+=== Einordnung und Ausblick
+Die über die gesamte Langzeitmessung gebildeten Kennzahlen liegen nahe an den für Stufe 3 der Kettenvalidierung in @mehrhop-validierung ermittelten Werten (dort Bridge 3: $-153"ns"$/$75"ns"$ und $-113"ns"$/$81"ns"$, Endpoint: $-428"ns"$/$82"ns"$; hier $-153,4"ns"$/$76,9"ns"$, $-119,9"ns"$/$83,2"ns"$ und $-420,1"ns"$/$94,4"ns"$). Die Langzeitmessung bestätigt damit im Wesentlichen das Bild aus dem rund 17-minütigen Einzellauf, ohne dass über Stunden hinweg ein zusätzlicher, erst bei längerer Laufzeit sichtbarer Fehleranteil hinzukommt. Die #acr-emph("E2E")-Synchronisationsgenauigkeit nach @normative-leistungsanforderungen ist damit auch über den in Annex B nicht weiter spezifizierten längeren Zeitraum hinweg durchgehend erfüllt.
+
+@fig-langzeit-boxplot bestätigt darüber hinaus, über eine deutlich breitere Datenbasis als in @mehrhop-validierung, den dort bereits beobachteten Trend. Mit jeder weiteren Bridge in der Kette verschiebt sich der Offset zum Grandmaster sichtbar weiter von der Referenz weg. Von rund $140"ns"$ an Bridge 1 über einen nahezu ausgeglichenen Bereich an Bridge 2 bis zu $-420,1"ns"$ am Endpoint nach vier Hops. Zusätzlich zu diesem Abwärtstrend wächst mit jeder weiteren Bridge auch der Jitter. Der IQR steigt monoton von $39,7$-$45,6"ns"$ an Bridge 1 über $55,2$-$63,4"ns"$ an Bridge 2 und $76,9$-$83,2"ns"$ an Bridge 3 bis auf $94,4"ns"$ am Endpoint. Jede zusätzliche Bridge in der Kette trägt damit messbar sowohl zum wachsenden Offset als auch zur wachsenden Jitter bei.
+
+Die vorliegenden Läufe fanden ebenfalls unter denselben Idealbedingungen wie die Basisvalidierung statt. Der nachfolgende Abschnitt prüft, ob dieselbe #acr-emph("E2E")-Anforderung auch unter Netzwerklast eingehalten wird.
 
 == Simulierte Netzwerklast <netzwerklast-test>
 Das eigentliche Versprechen einer Time-Aware Bridge im Sinne von #acr("TSN") besteht nicht nur darin, unter Idealbedingungen synchron zu bleiben, sondern insbesondere auch dann, wenn dieselbe physische Verbindung gleichzeitig von Best-Effort-Nutzverkehr belegt wird. Die bisherigen Messungen wurden hingegen ausschließlich in einem ansonsten unbelasteten Netz durchgeführt. Der nachfolgende Test prüft deshalb die in @anforderung-netzwerklast begründete Vorbedingung unter definiert erzeugter Hintergrundlast.

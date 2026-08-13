@@ -2,6 +2,7 @@
 // Content files should only import from this file.
 
 #import "lib/acronyms.typ": *
+#import "lib/glossary.typ": *
 #import "lib/captions.typ": *
 #import "lib/figures.typ": *
 #import "lib/tables.typ": *

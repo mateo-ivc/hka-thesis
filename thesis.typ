@@ -55,6 +55,40 @@
 // Short forms only in the list of abbreviations (body text stays with short/short-pl)
 #let abk-index-short = (:)
 
+// Glossary of domain terms (as opposed to the list of abbreviations above,
+// which only covers acronyms). Entries are kept to a short translation/gloss
+// rather than a full definition, and are written out in plain text rather
+// than via acr()/acr-emph, since those calls would mark the acronym as
+// "used" and trigger its first-use expansion right here on the glossary
+// page, before its actual first use in the body text.
+#init-glossary((
+  "domain": ("gPTP-Domäne", [Netzwerkbereich mit gemeinsamer Zeitbasis]),
+  "bridge": ("Time-Aware Bridge", [Zeitbewusste Bridge]),
+  "port-roles": ("Master-Port / Slave-Port", [Sende-Port / Empfangs-Port einer Bridge]),
+  "announce": ("Announce-Nachricht", [Ankündigungsnachricht (Clock-Qualität)]),
+  "step-mode": ("Two-Step-/Single-Step-Verfahren", [Zwei-Schritt-/Ein-Schritt-Verfahren]),
+  "pdelay": ("Peer-Delay-Mechanismus (pDelay)", [Peer-Verzögerungsmessung]),
+  "path-delay": ("Leitungsverzögerung (Path Delay)", [Signallaufzeit auf der Leitung]),
+  "residence-time": ("residence time", [Verweilzeit in der Bridge]),
+  "offset": ("Offset", [Zeitversatz]),
+  "rateratio": ("rateRatio", [Frequenzverhältnis zur Grandmaster Clock]),
+  "neighborrateratio": ("neighborRateRatio", [Frequenzverhältnis zum Nachbarport]),
+  "syntonization": ("Syntonisierung", [Frequenzabgleich]),
+  "allan": ("Allan-Abweichung", [Maß für Frequenzstabilität]),
+  "bounded-latency": ("Bounded Latency", [Garantierte maximale Latenz]),
+  "jitter": ("Jitter", [Unregelmäßige Verzögerungsschwankung]),
+  "devicetree": ("Device Tree", [Hardware-Beschreibung getrennt vom Code]),
+  "ingress-egress": ("Ingress-/Egress-Pfad", [Empfangs-/Sendepfad im Netzwerkstack]),
+  "clock": ("Clock", [Lokale Uhr eines Geräts]),
+  "grandmaster": ("Grandmaster", [Oberste Zeitreferenz der Domäne]),
+  "timestamp": ("Timestamp", [Erfasster Zeitpunkt eines Ereignisses]),
+  "preciseorigintimestamp": ("preciseOriginTimestamp", [Präziser Sendezeitpunkt der Grandmaster Clock]),
+  "correctionfield": ("correctionField", [Kumulierte Korrektur der Übertragungsverzögerung]),
+  "interrupt-handling": ("Interrupt-Handling", [Reaktion auf einen Hardware-Interrupt]),
+  "scheduling": ("Scheduling", [Zuteilung der Rechenzeit durch das Betriebssystem]),
+  "frame": ("Frame", [Übertragungseinheit auf Ethernet-Ebene]),
+))
+
 #set text(font: "Cambria")
 
 // Place an invisible marker on every page that carries body text, so that
@@ -140,6 +174,14 @@
 #v(0pt)
 
 #print-abk-verzeichnis(index-short: abk-index-short)
+
+#openright()
+
+// Glossary (own page, after the list of abbreviations)
+#text(size: 21pt)[*Glossar*]
+#v(0pt)
+
+#print-glossary()
 
 #openright()
 

@@ -1,4 +1,4 @@
-#import "../meta.typ": acr-emph, fig-platzhalter-mittel, note, req, tab-d
+#import "../meta.typ": acr-emph, fig-platzhalter-mittel, gls, note, req, tab-d
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Analyse und Entwurf
@@ -60,7 +60,7 @@ Bei einer einzelnen Bridge genügt ein Lauf für beide Größen: Belegt man die 
 Sobald mehr als eine Bridge im System ist, reichen vier Kanäle nicht mehr aus, um die gesamte Kette gleichzeitig zu erfassen. Da die #acr-emph("E2E")-Synchronisationsgenauigkeit laut Standard aber kumulativ über die Kette gilt und der Testaufbau mit maximal vier Hops innerhalb der zulässigen sieben bleibt, wird die Kette in mehreren Läufen mit wechselnder Kanalbelegung durchgemessen. Die Kanäle für #acr("GM") und Endpoint bleiben dabei über alle Läufe fest belegt, sodass sich die Läufe über diese gemeinsame Referenz zusammenführen lassen. Im Vordergrund steht hier entsprechend der #acr("GM")-relative Offset.
 
 === Nachweis der bridge-internen rateRatio-Genauigkeit <nachweis-rateratio>
-Die #acr("PPS")-Messung weist die #acr-emph("E2E")-Synchronisationsgenauigkeit nach, eignet sich aber nicht für den Nachweis der rateRatio-Genauigkeit aus @ieee8021as2025[B.2.4] - unter anderem gefordert für den internen Abgleich zwischen Master- und Slave-Instanz der Bridge (siehe @bridge-sync-impl). Da rateRatio eine Frequenzgröße ist, wird dieser Nachweis stattdessen über die Allan-Abweichung der geloggten rateRatio-Werte erbracht @allan1966statistics @riley2008frequencystability[13]. In dieser Arbeit wird dazu wie folgt vorgegangen:
+Die #acr("PPS")-Messung weist die #acr-emph("E2E")-Synchronisationsgenauigkeit nach, eignet sich aber nicht für den Nachweis der rateRatio-Genauigkeit aus @ieee8021as2025[B.2.4] - unter anderem gefordert für den internen Abgleich zwischen Master- und Slave-Instanz der Bridge (siehe @bridge-sync-impl). Da rateRatio eine Frequenzgröße ist, wird dieser Nachweis stattdessen über die #gls("allan")[Allan-Abweichung] der geloggten rateRatio-Werte erbracht @allan1966statistics @riley2008frequencystability[13]. In dieser Arbeit wird dazu wie folgt vorgegangen:
 
 1. Einschwingzeit abwarten, damit sich der #acr("PI")-Regler auf einen stabilen Zustand einschwingen kann.
 
