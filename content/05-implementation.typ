@@ -171,7 +171,7 @@ Die eigentliche Konfiguration des Shapers erfolgt beim Zurücksetzen des #acr("M
 Auf dem Sendepfad wählt `eth_nxp_enet_tx()` anschließend anhand des Frame-Typs den Ring aus. Maßgeblich ist der in `rxClassifyMatch` hinterlegte VLAN-Priority-Wert (hier 7, siehe @lst:avb-configure). Frames mit dieser Priorität werden dem Ring 1 zugeordnet, der übrige Verkehr verbleibt auf Ring 0. Da beide Ringe eigene Deskriptoren und einen eigenen Staging-Puffer besitzen, kann ein voller Ring 0 den Sendevorgang einer Sync-Nachricht nicht mehr blockieren.
 
 Damit diese Umleitung tatsächlich wirkt, muss zusätzlich eine Anpassung in der NXP-HAL berücksichtigt werden: `ENET_TransmitIRQHandler()` prüfte für die Rückgewinnung der Sende-Deskriptoren unabhängig vom bedienten Ring fest das Interrupt-Bit von Ring 0, sodass `ENET_ReclaimTxDescriptor()` für Ring 1 nie aufgerufen wurde und die benötigten Sende-Zeitstempel leer blieben. Auch dieses Bit musste daher ringabhängig ausgewertet werden.
-#note[Die HAL Änderungen sind hier schwer zu verstehen. Vielleicht komplett entfernen oder in den Grundlagen erklären.]
+
 
 === Empfangspfad: Ring-Bedienung, Verkehrsklasse und Pufferreservierung
 Der #acr("CBS") schützt ausschließlich die Senderichtung. In dem in Kapitel "Tests" beschriebenen Lastszenario trifft die Nutzlast die Bridge aber am Eingang. Daher müssen drei weitere Engpässe auf dem Empfangspfad beseitigt werden.
@@ -201,7 +201,6 @@ Der Empfangs-Task des Treibers bediente bislang ausschließlich Ring 0. Ring 1 b
 ) <lst:rx-ring-interleave>
 
 *Eigene Empfangs-Verkehrsklasse für gPTP*\
-#note[Was passiert erst? Puffer allokieren oder in Warteschlange schicken? Dementsprechen sortieren.]
 Zephyr kann eingehende Pakete anhand einer im Treiber zugewiesenen Priorität auf mehrere getrennte, priorisierte Empfangs-Warteschlangen zum Netzwerkstack verteilen. Der ENET-Treiber setzte diese Priorität jedoch nie, sodass sämtliche Pakete mit der Standardpriorität 0 ankamen und #acr("gPTP") und Nutzlast in derselben Warteschlange landeten. Die konfigurierten Verkehrsklassen blieben auf der Empfangsseite damit wirkungslos. Behoben wurde dies, indem #acr("PTP")-Frames im Treiber vor der Übergabe an den Netzwerkstack die Priorität `NET_PRIORITY_IC` erhalten und damit in einer eigenen Warteschlange landen, dieselbe Klasse, die das #acr("gPTP")-Subsystem sendeseitig ohnehin bereits setzt.
 
 #figure(
