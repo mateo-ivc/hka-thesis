@@ -1,12 +1,12 @@
-#import "../meta.typ": acr-emph, fig-platzhalter-mittel, gls, note, req, tab-d
+#import "../meta.typ": acr-emph, fig-platzhalter-mittel, gls, note, req, tab-d, tab-h
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
-= Analyse und Entwurf
-Aufbauend auf den in Kapitel 2 vorgestellten Grundlagen leitet dieses Kapitel zunächst die für die vorliegende Arbeit relevanten Anforderungen an eine konforme #acr-emph("gPTP")-Implementierung ab. Anschließend wird der grundlegende Testaufbau vorgestellt, mit dem diese Implementierung in den folgenden Kapiteln validiert wird, gefolgt von der Messmethodik, die beschreibt, wie die Einhaltung der zuvor abgeleiteten Anforderungen messtechnisch nachgewiesen wird. Abschließend werden bekannte Ungenauigkeiten des Testaufbaus benannt, die bei der späteren Interpretation der Messergebnisse zu berücksichtigen sind.
+= Analyse und Entwurf <analyse-und-entwurf>
+Aufbauend auf den in @Grundlagen vorgestellten Grundlagen leitet dieses Kapitel zunächst die für die vorliegende Arbeit relevanten Anforderungen an eine konforme #acr-emph("gPTP")-Implementierung ab. Anschließend wird der grundlegende Testaufbau vorgestellt, mit dem diese Implementierung in den folgenden Kapiteln validiert wird, gefolgt von der Messmethodik, die beschreibt, wie die Einhaltung der zuvor abgeleiteten Anforderungen messtechnisch nachgewiesen wird. Abschließend werden bekannte Ungenauigkeiten des Testaufbaus benannt, die bei der späteren Interpretation der Messergebnisse zu berücksichtigen sind.
 
 == Anforderungen
 
-Eine konforme #acr-emph("gPTP")-Implementierung muss mehr leisten, als nur die in Annex B des Standards genannten Zeitgrenzwerte einzuhalten. Dieser Abschnitt gliedert die für die Arbeit relevanten Anforderungen deshalb in vier Gruppen: die normativen Leistungsanforderungen aus Annex B selbst, die Robustheit der Synchronisierung unter Netzwerklast, die Ressourcenstabilität der Implementierung über die Messdauer hinweg, sowie die sich aus dem Testaufbau ergebenden Hardwareanforderungen.
+Eine konforme #acr-emph("gPTP")-Implementierung muss mehr leisten, als nur die in Annex B des Standards genannten Zeitgrenzwerte einzuhalten. Dieser Abschnitt gliedert die für die Arbeit relevanten Anforderungen deshalb in vier Gruppen: die normativen Leistungsanforderungen aus Annex B selbst, die normative Obergrenze der `residence time`, die Robustheit der Synchronisierung unter Netzwerklast, sowie die sich aus dem Testaufbau ergebenden Hardwareanforderungen. @tab-anforderungen fasst die daraus abgeleiteten Einzelanforderungen am Ende des Abschnitts zusammen und vergibt die Bezeichner, auf die sich die Erfüllungsmatrix in @erfuellungsmatrix später bezieht.
 
 === Normative Leistungsanforderungen <normative-leistungsanforderungen>
 Der Standard macht die Synchronisierung eines Ports von der Variable `asCapable` abhängig @ieee8021as2025[10.2.5.1]. Nur wenn sie `TRUE` ist, verarbeitet die Sync-Statemachine überhaupt eingehende Sync-Nachrichten @ieee8021as2025[11.2.2]. Ist sie `FALSE`, verwirft die Bridge jede Sync-Nachricht. Unter anderem hängt `asCapable` vom gemessenen meanLinkDelay ab @ieee8021as2025[11.2.2]. Überschreitet dieser $800n s$ (100BASE-TX/1000BASE-T), geht der Standard von Equipment ohne #acr("gPTP")-Unterstützung im Pfad aus und setzt `asCapable` auf `FALSE`.
@@ -15,18 +15,72 @@ Ist `asCapable` TRUE, hängt die tatsächlich erreichte Genauigkeit von zwei wei
 
 Werden diese Anforderungen eingehalten, gilt die eigentliche Zielgröße dieser Arbeit. Die #acr-emph("E2E")-Synchronisationsgenauigkeit von $<=1mu s$ über bis zu sieben Hops @ieee8021as2025[B.3], allerdings ausdrücklich nur "during steady-state operation", was bedeutet, dass die Einschwingphase hier nicht beachtet wird @ieee8021as2025[B.3].
 
+Neben den Genauigkeitsgrenzen begrenzt der Standard auch die Zeit, die eine Nachricht innerhalb einer PTP Relay Instance verbringen darf. Die `residence time` einer Bridge darf $10"ms"$ nicht überschreiten @ieee8021as2025[B.2.2].
+Für die vorliegende Arbeit ist diese Anforderung besonders relevant, weil die untersuchte Implementierung die Weiterleitung rein in Software durchführt.
+
 === Robustheit unter Netzwerklast <anforderung-netzwerklast>
 Annex B selbst nennt keinen eigenen Grenzwert für Netzwerklast. Relevant ist die Anforderung dennoch, weil die #acr-emph("E2E")-Synchronisationsgenauigkeit aus @normative-leistungsanforderungen laut Standard nur unter der bereits genannten Bedingung gilt, dass jede Instanz ihre Sync-Nachricht in jedem Intervall empfängt. Genau diese Bedingung gefährdet Best-Effort-Nutzverkehr auf demselben physischen Port. Werden #acr("gPTP")-Nachrichten durch konkurrierenden Verkehr verzögert oder verworfen, ist die Vorbedingung von B.3 verletzt, unabhängig davon, wie exakt Granularität und rateRatio-Genauigkeit eingehalten werden.
 
-=== Ressourcenstabilität <anforderung-ressourcenstabilitaet>
-Auch zur Ressourcenstabilität einer Implementierung trifft Annex B keine Aussage. Relevant ist sie dennoch, weil ein Synchronisationsausfall in der Praxis seltener durch einen einzelnen falschen Zeitstempel entsteht als durch Ressourcenerschöpfung. Volllaufende Empfangspuffer, überlaufende Zähler oder verlorene Referenzen, die sich erst nach längerer Laufzeit oder unter Last bemerkbar machen. Die Implementierung wird deshalb zusätzlich zur PPS-Messung über Hardware- und Software-Zähler beobachtet, die genau solche Fehler unabhängig vom Offset sichtbar machen.
+Entscheidend ist dabei, an welcher Stelle der Verkehr um Ressourcen konkurriert. Ein Synchronisationsausfall unter Last entsteht in der Praxis selten durch einen falschen Zeitstempel, sondern dadurch, dass eine #acr("gPTP")-Nachricht auf dem Empfangspfad keinen Puffer mehr erhält und deshalb gar nicht erst beim Protokollstapel ankommt. Der Nachweis dieser Anforderung darf sich folglich nicht auf die beobachtete Genauigkeit beschränken, sondern muss zusätzlich zeigen, dass der #acr("gPTP")-Verkehr auch unter Last durchgängig mit Puffern versorgt bleibt.
 
 === Hardwareanforderungen
 
 Neben den normativen Leistungsanforderungen ergeben sich aus dem gewählten Testaufbau weitere Anforderungen an die eingesetzte Hardware. Zeitstempel für ein- und ausgehende #acr("gPTP")-Nachrichten müssen dabei mindestens auf #acr("MAC")-Ebene erzeugt werden (siehe @hardware-timestamping), und jede Time-Aware Bridge muss Nachrichten an einem Port empfangen und über einen weiteren weiterleiten können, verfügt also über mindestens zwei Ports. Da im Testaufbau sowohl gigabit- als auch fast-ethernet-fähige Geräte in gemischten Ketten miteinander verbunden werden, muss außerdem jedes eingesetzte Gerät mindestens 100BASE-TX unterstützen, damit sich über alle Hops hinweg eine durchgängige Verbindung herstellen lässt.
 
+=== Zusammenfassung der Anforderungen
+@tab-anforderungen fasst die in diesem Abschnitt abgeleiteten Anforderungen zusammen. Die vergebenen Bezeichner A1 bis A7 dienen als durchgängige Referenz. Die Messmethodik in @messmethodik ordnet jeder Anforderung ein Nachweisverfahren zu, die Tests in @tests erbringen den jeweiligen Nachweis, und die Erfüllungsmatrix in @erfuellungsmatrix führt letztendlich beides zusammen.
+
+#figure(
+  table(
+    columns: (0.4fr, 2.6fr, 1.3fr),
+    align: (left, left, left),
+    stroke: none,
+    table.hline(),
+    tab-h[ID], tab-h[Anforderung], tab-h[Herkunft],
+    table.hline(stroke: 0.5pt),
+
+    tab-d[A1 #label("a1")],
+    tab-d[`asCapable` = `TRUE`, d. h. meanLinkDelay $<=800n s$ auf jedem Link],
+    tab-d[normativ @ieee8021as2025[10.2.5.1]],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[A2 #label("a2")],
+    tab-d[Granularität der LocalClock $<=40n s$],
+    tab-d[normativ @ieee8021as2025[B.1.2]],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[A3 #label("a3")],
+    tab-d[Messgenauigkeit der rateRatio $<=0,1$ #acr("ppm")],
+    tab-d[normativ @ieee8021as2025[B.2.4]],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[A4 #label("a4")],
+    tab-d[#acr-emph("E2E")-Synchronisationsgenauigkeit $<=1mu s$ über bis zu sieben Hops im eingeschwungenen Zustand],
+    tab-d[normativ @ieee8021as2025[B.3]],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[A5 #label("a5")],
+    tab-d[`residence time` je PTP Relay Instance $<=10"ms"$],
+    tab-d[normativ @ieee8021as2025[11.1.3]],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[A6 #label("a6")],
+    tab-d[Synchronisation bleibt unter Best-Effort-Netzwerklast auf demselben Port erhalten, ohne dass #acr("gPTP")-Nachrichten mangels Puffer verworfen werden],
+    tab-d[abgeleitet (@anforderung-netzwerklast)],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[A7 #label("a7")],
+    tab-d[#acr("MAC")-Timestamping, $>=2$ Ports je Bridge, mindestens 100BASE-TX],
+    tab-d[Testaufbau],
+    table.hline(),
+  ),
+  caption: [Übersicht der abgeleiteten Anforderungen],
+) <tab-anforderungen>
+
 == Grundlegender Testaufbau <testaufbau>
-Für die nachfolgenden Tests werden drei phyBOARD-Atlas-Boards@phytec_imxrt1170_devkit als Bridge eingesetzt. Jedes Board verfügt über zwei Ethernet-Ports mit unterschiedlichem #acr("PHY"): Der 1GBit/s-Port nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung @ti_dp83867e, der 100/10MBit/s-Port hingegen einen #acr("PHY") ohne #acr("SFD")-Erkennung @microchip_ksz8081. Des Weiteren werden zwei STM32H7-Boards@st_nucleo_h755zi_q eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungieren soll. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten, was jedoch das Abschalten des #acr("BTCA") erzwingt, um den einzelnen Systemen ihre feste Rolle zuzuweisen.
+Für die nachfolgenden Tests werden drei phyBOARD-Atlas-Boards@phytec_imxrt1170_devkit als Bridge eingesetzt. Jedes Board verfügt über zwei Ethernet-Ports mit unterschiedlichem #acr("PHY"). Der 1GBit/s-Port nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung @ti_dp83867e, der 100/10MBit/s-Port hingegen einen #acr("PHY") ohne #acr("SFD")-Erkennung @microchip_ksz8081. Auf jeder Bridge liegt der #acr("gPTP")-Slave-Port dabei fest auf dem #acr("SFD")-fähigen 1GBit/s-Port (`enet1g`), der Master-Port entsprechend auf dem 100/10MBit/s-Port (`enet`) ohne #acr("SFD")-Erkennung. Da Letzterer die Verbindung zum jeweils nächsten Hop bildet, ist jede Inter-Bridge-Strecke in der Kette damit unabhängig von der auf der Gegenseite verfügbaren Gigabit-Bandbreite auf $100"Mbit/s"$ begrenzt. Des Weiteren werden zwei STM32H7-Boards@st_nucleo_h755zi_q eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungieren soll. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten, was jedoch das Abschalten des #acr("BTCA") erzwingt, um den einzelnen Systemen ihre feste Rolle zuzuweisen.
+
+Als _Hop_ wird in dieser Arbeit durchgehend eine einzelne Verbindung zwischen zwei benachbarten PTP-Instanzen bezeichnet, entsprechend der Zählweise, die dem in @normative-leistungsanforderungen genannten Grenzwert von sieben Hops zugrunde liegt. Eine Kette aus $n$ Bridges zwischen Grandmaster und Endpoint besitzt damit $n+1$ Hops: Der Aufbau Grandmaster $<->$ Bridge 1 $<->$ Endpoint umfasst zwei Hops, der maximale Aufbau dieser Arbeit mit drei Bridges entsprechend vier Hops. Die vom Standard vorgesehene maximale Kettenlänge von sieben Hops entspricht folglich sechs kaskadierten Bridges.
 
 Die beiden Ports des phyBOARD-Atlas weisen bei den in @mac-layer und @cbs behandelten #acr("CBS")-Mechanismen Unterschiede auf. Während die #acr("MAC")-Peripherie des 1GBit/s-Ports (`enet1g`) einen Credit Based Shaper unterstützt @zephyr_eth_nxp_enet_source, fehlt dem 100/10MBit/s-Port beider Geräte eine entsprechende Hardware-Warteschlange. Dies bedeutet, dass zwar alle Schnittstellen beider Geräte die Zeitsynchronisierung unterstützen, jedoch nur der enet1g-Port des phyBOARD-Atlas über geeignete Hardware für #acr("TSN")-Support im weiteren Sinne verfügt.
 
@@ -34,13 +88,13 @@ Zusätzlich verfügt jede Ethernet-Schnittstelle über einen eigenen #acr("MAC")
 
 Da in dieser Arbeit ausschließlich die Bridgefunktion validiert werden soll, muss die als Grandmaster Clock eingesetzte Hardware selbst keine Anbindung an eine externe Referenzzeit besitzen und wird stattdessen im Free-Running-Mode betrieben. Alle übrigen Geräte synchronisieren sich wie in @tsn-intro beschrieben ausschließlich auf diese lokale Zeitbasis. Die dafür nötigen #acr("gPTP")-Nachrichten werden dabei nach den Standardwerten mit 1Hz für pDelay und 8Hz für Sync versendet.
 
-== Messmethodik
+== Messmethodik <messmethodik>
 Die zuvor abgeleiteten Anforderungen sind nur dann aussagekräftig, wenn sich ihre Einhaltung auch nachweisen lässt. Dieser Abschnitt beschreibt deshalb, mit welchen Verfahren die einzelnen Anforderungen am Testaufbau überprüft werden.
 
-Den Kern bildet eine #acr("PPS")-basierte Messung, mit der sich der tatsächliche Zeitversatz zwischen den Clocks unabhängig vom #acr("gPTP")-Stack selbst messen lässt. Zunächst werden dazu der Messaufbau und die Datenerfassung vorgestellt. Da sich nicht alle Anforderungen über den #acr("PPS")-Offset abbilden lassen, werden anschließend die eigenständigen Nachweisverfahren für die rateRatio-Genauigkeit und die Ressourcenstabilität beschrieben. Abschließend wird festgelegt, wie die aufgenommenen Offset-Zeitreihen statistisch ausgewertet werden und ab wann eine Anforderung als erfüllt gilt.
+Den Kern bildet eine #acr("PPS")-basierte Messung, mit der sich der tatsächliche Zeitversatz zwischen den Clocks unabhängig vom #acr("gPTP")-Stack selbst messen lässt. Zunächst werden dazu der Messaufbau und die Datenerfassung vorgestellt. Da sich nicht alle Anforderungen über den #acr("PPS")-Offset abbilden lassen, werden anschließend die ergänzenden Nachweisverfahren für die rateRatio-Genauigkeit und für die Pufferversorgung des #acr("gPTP")-Pfads unter Last beschrieben. Abschließend wird festgelegt, wie die aufgenommenen Offset-Zeitreihen statistisch ausgewertet werden und ab wann eine Anforderung als erfüllt gilt.
 
-=== Messaufbau und Datenerfassung
-Um die tatsächlich erreichte Synchronisierungsgenauigkeit des Testaufbaus zu überprüfen, reicht eine rein softwareseitige Betrachtung der berechneten Offsets nicht aus, da diese bereits durch den Synchronisierungsalgorithmus korrigiert werden. Zudem würden systematische Messfehler innerhalb eines Controllers auf diese Weise nicht auffallen, da dieselben Fehler sowohl die #acr("gPTP")-Synchronisation selbst als auch eine rein softwareseitige Messung ihrer Genauigkeit gleichermaßen verfälschen würden. Stattdessen wird die Synchronisierung über einen unabhängigen Hardware-Trigger am jeweiligen Mikrocontroller nachgewiesen: Die zu vergleichenden Clocks legen jeweils ein #acr("PPS")-Signal auf einen #acr-emph("GPIO")-Pin. Ein Impuls, der immer genau beim Rollover zur nächsten Sekunde ausgelöst wird. Da dieser Impuls direkt aus dem internen Timer der Clock abgeleitet wird, ist er unabhängig vom #acr("gPTP")-Stack. Die zeitliche Differenz zweier #acr("PPS")-Flanken entspricht dem tatsächlichen Offset zwischen den beiden Clocks und lässt sich extern messen@nguyen2020fuzzypi.
+=== Messaufbau und Datenerfassung <messaufbau-datenerfassung>
+Um die tatsächlich erreichte Synchronisierungsgenauigkeit des Testaufbaus zu überprüfen, reicht eine rein softwareseitige Betrachtung der berechneten Offsets nicht aus, da diese bereits durch den Synchronisierungsalgorithmus korrigiert werden. Zudem würden systematische Messfehler innerhalb eines Controllers auf diese Weise nicht auffallen, da dieselben Fehler sowohl die #acr("gPTP")-Synchronisation selbst als auch eine rein softwareseitige Messung ihrer Genauigkeit gleichermaßen verfälschen würden. Stattdessen wird die Synchronisierung über einen unabhängigen Hardware-Trigger am jeweiligen Mikrocontroller nachgewiesen. Die zu vergleichenden Clocks legen jeweils ein #acr("PPS")-Signal auf einen #acr-emph("GPIO")-Pin, also einen Impuls, der immer genau beim Rollover zur nächsten Sekunde ausgelöst wird. Da dieser Impuls direkt aus dem internen Timer der Clock abgeleitet wird, ist er unabhängig vom #acr("gPTP")-Stack. Die zeitliche Differenz zweier #acr("PPS")-Flanken entspricht dem tatsächlichen Offset zwischen den beiden Clocks und lässt sich extern messen@nguyen2020fuzzypi.
 
 Für die Erfassung wird ein Oszilloskop mit vier Kanälen eingesetzt. Einer dieser Kanäle ist in jeder Messung fest dem #acr("GM") zugeordnet, da deren Clock die Referenz ist, auf die sich alle übrigen Geräte synchronisieren. Die verbleibenden drei Kanäle werden je nach Messziel unterschiedlich belegt.
 
@@ -50,7 +104,7 @@ Die #acr("PPS")-Flanken der belegten Kanäle werden dabei jeweils gleichzeitig �
 
 In diesen Diagrammen ist unabhängig vom Messziel ein charakteristischer Verlauf zu erwarten. Direkt nach dem Start bzw. Link-Up ist der Offset zwischen den Clocks zunächst groß, da noch keine Synchronisierung stattgefunden hat. Mit fortschreitender Regelung durch den Synchronisierungsalgorithmus sinkt der Offset über mehrere Sync-Intervalle hinweg, bis er in einen stabilen Zustand übergeht. Dieser Einschwingvorgang macht die Regelung des Synchronisierungsalgorithmus sichtbar. Der Offset läuft dabei nicht exakt gegen null, sondern pendelt im eingeschwungenen Zustand innerhalb eines kleinen Reststreubands. Für den #acr("GM")-relativen Offset ist dessen maximal zulässige Breite direkt durch die #acr-emph("E2E")-Synchronisationsgenauigkeit aus @normative-leistungsanforderungen vorgegeben.
 
-Neben der PPS-Messung existiert für Anforderungen, die sich nicht allein über den PPS-Offset nachweisen lassen, eine zweite Datenerfassung. Über die UART-Shell von Zephyr lassen sich Logs aufzeichnen, welche mehr Details über das System preisgeben. Das Logging läuft dabei über die gesamte Laufzeit mit und liefert Daten, die für den jeweiligen Nachweis eine genauere oder unabhängige Aussage erlauben. Welche Daten das im Einzelnen sind und wie sie ausgewertet werden, wird in den jeweiligen Abschnitten @nachweis-rateratio und @nachweis-ressourcenstabilitaet beschrieben.
+Neben der PPS-Messung existiert für Anforderungen, die sich nicht allein über den PPS-Offset nachweisen lassen, eine zweite Datenerfassung. Über die UART-Shell von Zephyr werden Logs aufgezeichnet, welche mehr Details über das System preisgeben. Das Logging läuft dabei über die gesamte Laufzeit mit und liefert Daten, die für den jeweiligen Nachweis eine genauere oder unabhängige Aussage erlauben. Welche Daten das im Einzelnen sind und wie sie ausgewertet werden, wird in den jeweiligen Abschnitten @nachweis-rateratio und @nachweis-pufferversorgung beschrieben.
 
 === Kanalbelegung je Messziel <kanalbelegung>
 Welche Messpunkte auf die drei frei belegbaren Kanäle gelegt werden, richtet sich nach der Länge der zu vermessenden Kette.
@@ -72,15 +126,15 @@ $
   sigma_y (tau) = sqrt(1/(2(M-1)) sum_(i=1)^(M-1) (y_(i+1) - y_i)^2)
 $
 
-Dabei ist $y_i = "rateRatio"_i - 1$ die fraktionale Frequenzabweichung des $i$-ten Messintervalls und $M$ die Anzahl der gemessenen Intervalle. Das Mittelungsintervall $tau$ ergibt sich aus der Messmethodik selbst. Durch die #acr("PPS")-Flanken folgt die Sekündliche aktualisierung der rateRatio des bridge-internen Servos. In dieser Arbeit wird deshalb durchgehend mit $tau = 1"s"$ gerechnet. Liegt die berechnete Allan-Abweichung $sigma_y (tau = 1"s")$ innerhalb der geforderten 0,1 #acr("ppm"), gilt die Anforderung als erfüllt.
+Dabei ist $y_i = "rateRatio"_i - 1$ die fraktionale Frequenzabweichung des $i$-ten Messintervalls und $M$ die Anzahl der gemessenen Intervalle. Das Mittelungsintervall $tau$ ergibt sich aus der Messmethodik selbst. Durch die #acr("PPS")-Flanken folgt die sekündliche aktualisierung der rateRatio des bridge-internen Servos. In dieser Arbeit wird deshalb durchgehend mit $tau = 1"s"$ gerechnet. Liegt die berechnete Allan-Abweichung $sigma_y (tau = 1"s")$ innerhalb der geforderten 0,1 #acr("ppm"), gilt die Anforderung als erfüllt.
 
-=== Nachweis der Ressourcenstabilität <nachweis-ressourcenstabilitaet>
-Auch die in "Ressourcenstabilität" begründete Anforderung wird nicht über den PPS-Offset geprüft, sondern über zwei Zähler, die parallel zur Langzeitmessung sekündlich mitgeloggt werden. Die MAC-eigenen Statistikzähler (`rx_pkts`, `rx_ok`, `drop`, `crc`, `align`, `macerr`), die über `ENET_GetStatistics()` ausgelesen werden, sowie ein treiberinterner Zähler für fehlgeschlagene Pufferallokationen auf dem #acr("gPTP")-Empfangspfad (`alloc_fail_ptp`).
+=== Nachweis der Pufferversorgung unter Last <nachweis-pufferversorgung>
+Die #acr("PPS")-Messung zeigt, ob die Synchronisation unter Last erhalten bleibt, nicht aber, woran es liegt, wenn sie es nicht tut. Für den zweiten Teil von #req("A6"), dass #acr("gPTP")-Nachrichten auch unter Last durchgängig einen Empfangspuffer erhalten, wird deshalb ergänzend ein treiberinterner Zähler ausgewertet, der fehlgeschlagene Pufferallokationen auf dem #acr("gPTP")-Empfangspfad zählt (`alloc_fail_ptp`). Dieser wird während des Lasttests sekündlich mitgeloggt.
 
-Anders als beim Nachweis über $t_"set"$ gibt es hier kein Einschwingverhalten und kein Toleranzband. Ausschlaggebend ist `alloc_fail_ptp`. Bleibt dieser treiberinterne, gPTP-spezifische Zähler über die gesamte Laufzeit bei null, gilt die Anforderung als erfüllt. Ein Anstieg der übrigen, globalen MAC-Zähler (`drop`, `crc`, `align`, `macerr`) ist dagegen kein eigenständiger Verstoß. Sie unterscheiden nicht nach Verkehrsklasse und dürfen unter Last durch verworfenen Best-Effort-Verkehr durchaus ansteigen, solange davon ausschließlich der unkritische Verkehr betroffen ist und weder `alloc_fail_ptp` noch die PPS-basierte Synchronisationsgenauigkeit sich dadurch verschlechtern.
+Anders als beim Nachweis über $t_"set"$ gibt es hier kein Einschwingverhalten und kein Toleranzband. Ausschlaggebend ist `alloc_fail_ptp`. Bleibt dieser treiberinterne, gPTP-spezifische Zähler über die gesamte Laufzeit bei null, gilt die Anforderung als erfüllt. Ein Anstieg der übrigen, globalen MAC-Zähler (#gls("statsRxFifoOverflowErr")[statsRxFifoOverflowErr], #gls("statsRxDropInvalidSFD")[statsRxDropInvalidSFD], #gls("statsRxCrcErr")[statsRxCrcErr], #gls("statsRxAlignErr")[statsRxAlignErr]) ist dagegen kein eigenständiger Verstoß. Sie unterscheiden nicht nach Verkehrsklasse und dürfen unter Last durch verworfenen Best-Effort-Verkehr durchaus ansteigen, solange davon ausschließlich der unkritische Verkehr betroffen ist und weder `alloc_fail_ptp` noch die PPS-basierte Synchronisationsgenauigkeit sich dadurch verschlechtern.
 
-=== Statistische Auswertung
-Aus den Offset-Zeitreihen der PPS-basierten Validierungsszenarien werden für das Kapitel Evaluation zwei Aspekte abgeleitet. Der eigentliche Nachweis, dass die #acr-emph("E2E")-Synchronisationsgenauigkeit aus @normative-leistungsanforderungen eingehalten wird - im Netzwerklast-Test zugleich der Nachweis, dass die in @anforderung-netzwerklast begründete Vorbedingung dafür auch unter Last erfüllt bleibt -, sowie eine Beschreibung des eingeschwungenen Zustands, auf die dort bei der Diskussion der in @Ungenauigkeiten benannten Fehlerquellen zurückgegriffen wird. Die rateRatio-Genauigkeit und die Ressourcenstabilität werden dagegen über die in @nachweis-rateratio und @nachweis-ressourcenstabilitaet beschriebenen, eigenständigen Verfahren nachgewiesen.
+=== Statistische Auswertung <statistische-auswertung>
+Aus den Offset-Zeitreihen der PPS-basierten Validierungsszenarien werden für das Kapitel Evaluation zwei Aspekte abgeleitet. Der eigentliche Nachweis, dass die #acr-emph("E2E")-Synchronisationsgenauigkeit aus @normative-leistungsanforderungen eingehalten wird, sowie eine Beschreibung des eingeschwungenen Zustands, auf die dort bei der Diskussion der in @Ungenauigkeiten benannten Fehlerquellen zurückgegriffen wird. Die rateRatio-Genauigkeit und die Pufferversorgung des #acr("gPTP")-Pfads werden dagegen über die in @nachweis-rateratio und @nachweis-pufferversorgung beschriebenen, ergänzenden Verfahren nachgewiesen.
 
 *Läufe und Auswertungsintervalle*\
 Ein einzelner Oszilloskop-Lauf ist auf 1000 #acr("PPS")-Perioden begrenzt (siehe "Messaufbau und Datenerfassung"), also rund 16,6 Minuten. Einzelbridge-Validierung, Kettenvalidierung und Netzwerklast-Test bleiben innerhalb dieses Fensters und liefern damit je eine durchgehende Zeitreihe pro Lauf. Die mehrstündige Langzeitmessung überschreitet dieses Fenster dagegen zwangsläufig und wird stattdessen durch mehrere über die Messdauer verteilte Läufe abgedeckt. Innerhalb eines Laufs kann es zudem mehrere Test-Cases geben, etwa die drei Laststufen in @netzwerklast-test. Die folgende Auswertung bezieht sich deshalb nicht auf den Lauf als Ganzes, sondern auf das jeweilige Auswertungsintervall. Bei einem Lauf mit nur einem Test-Case ist das der gesamte gültige Bereich nach $t_"set"$, bei mehreren Laststufen je Laststufe, bei der Langzeitmessung je Lauf.
@@ -89,9 +143,12 @@ Ein einzelner Oszilloskop-Lauf ist auf 1000 #acr("PPS")-Perioden begrenzt (siehe
 Die Anforderung aus @normative-leistungsanforderungen gilt als erfüllt, sobald eine Einschwingzeit $t_"set"$ existiert. Der früheste Zeitpunkt, ab dem der Offset das dadurch vorgegebene $1mu s$-Toleranzband nicht mehr verlässt und darin bis zum Ende des Laufs verbleibt. Eine einzelne, kurzzeitige Unterschreitung des Toleranzbands zählt nicht als Einschwingen, da sie nur zufällig getroffen sein kann. Bei der aus mehreren Läufen zusammengesetzten Langzeitmessung wird $t_"set"$ aus dem ersten Lauf bestimmt. Jeder folgende Lauf muss zusätzlich vollständig innerhalb des Toleranzbands liegen. Verlässt der Offset das Band in einem späteren Lauf erneut, obwohl $t_"set"$ bereits erreicht war, gilt die Anforderung als nicht erfüllt.
 
 *Vergleichende Darstellung*\
-Innerhalb eines Auswertungsintervalls werden die Messpunkte als Boxplots nebeneinander dargestellt. Median, Interquartilsabstand und Ausreißer sind darin für jeden Messpunkt auf einen Blick vergleichbar, ohne die einzelnen Offset-Zeitreihen übereinanderlegen zu müssen. Ein kurzzeitiger Paketverlust fällt so als einzelner Ausreißer auf. Bei Läufen mit mehreren Auswertungsintervallen lässt sich dieselbe Darstellung zusätzlich nutzen, um einen Messpunkt über die Intervalle hinweg zu vergleichen und so einen systematischen Trend von Median oder Streuung sichtbar zu machen.
+Innerhalb eines Auswertungsintervalls werden die Messpunkte als Boxplots nebeneinander dargestellt. Die Wahl von Median und Interquartilsabstand anstelle von Mittelwert und Standardabweichung ist dabei bewusst. Beide Kennzahlen sind robust gegenüber einzelnen Ausreißern @fahrmeir2024statistik, wie sie hier durch vereinzelte Paketverluste oder fehlende #acr("PPS")-Flanken zu erwarten sind, und beschreiben die Lage des eingeschwungenen Bands deshalb zuverlässiger als momentbasierte Kennzahlen. Median, Interquartilsabstand und Ausreißer sind für jeden Messpunkt auf einen Blick vergleichbar, ohne die einzelnen Offset-Zeitreihen übereinanderlegen zu müssen. Ein kurzzeitiger Paketverlust fällt so als einzelner Ausreißer auf. Bei Läufen mit mehreren Auswertungsintervallen lässt sich dieselbe Darstellung zusätzlich nutzen, um einen Messpunkt über die Intervalle hinweg zu vergleichen und so einen systematischen Trend von Median oder Streuung sichtbar zu machen.
 
 Jedes Auswertungsintervall muss dabei lang genug sein, um nach $t_"set"$ noch mehrere hundert #acr("PPS")-Perioden für die Statistik zu liefern, damit Median, Interquartilsabstand und die übrigen Boxplot-Kennzahlen nicht mehr nennenswert vom Stichprobenumfang abhängen.
+
+=== Fehlerbudget-Betrachtung <nachweis-fehlerbudget>
+Über den reinen Erfüllt/Nicht-erfüllt-Nachweis aus @normative-leistungsanforderungen hinaus wird der gemessene Offset zusätzlich in seine einzelnen Fehlerbeiträge zerlegt. Dazu wird das $1mu s$-Toleranzband aus B.3 als Fehlerbudget aufgefasst. Der Standard selbst leitet diese Grenze bereits über eine Zerlegung in einzelne Fehlerbeiträge her @ieee8021as2025[B]. Gegenüber diesem Budget lassen sich einzelne, unabhängig voneinander messbare Fehlerquellen, etwa die LocalClock-Granularität, der Servo-Restfehler der bridge-internen Synchronisierung oder die Auflösung der Messkette selbst, jeweils als Anteil in Nanosekunden und in Prozent ausdrücken. Da die Beiträge unterschiedlichen, teils unbekannten Verteilungen folgen und nicht als unabhängig vorausgesetzt werden können, werden sie nicht statistisch, sondern linear zu einer oberen Schranke aufsummiert. Ein Vorgehen, das Bailleul et al. für die Worst-Case-Synchronisationsgenauigkeit von #acr("IEEE") 802.1AS in ähnlicher Form anwenden @bailleul2023etfa. Bleibt die Summe der quantifizierten Einzelbeiträge deutlich unterhalb des Budgets und konsistent mit dem tatsächlich gemessenen Gesamtoffset, stützt dies die Konsistenz der übrigen Nachweise.
 
 == Ungenauigkeiten<Ungenauigkeiten>
 Der pDelay-Mechanismus aus @pDelay-mechanism setzt voraus, dass die Signallaufzeit zwischen zwei Ports in beide Richtungen symmetrisch ist @ieee8021as2025[11.2]. Nur unter dieser Annahme lässt sich aus der Summe $t_4 - t_1$ und $t_3 - t_2$ ein einseitiger meanLinkDelay berechnen. Der vorliegende Testaufbau verletzt jedoch diese Annahme. Wie in @testaufbau beschrieben, verfügt der 1Gbit #acr("PHY") über eine #acr("SFD")-Erkennung. Die beiden 10/100Mbit #acrpl("PHY") besitzen diese Funktion jedoch nicht. Alles, was in einem Ethernet-Frame vor dem #acr("SFD") steht, liegt dadurch innerhalb des Zeitstempels. Zusätzlich ist diese interne Verarbeitungszeit zwischen Sende- und Empfangsrichtung nicht notwendigerweise gleich groß, wodurch die Symmetrieannahme des pDelay-Mechanismus zusätzlich verletzt wird. Diese Asymmetrie erklärt, warum an Hops mit einem 10/100Mbit #acr("PHY") ein deutlich höherer meanLinkDelay gemessen wird.

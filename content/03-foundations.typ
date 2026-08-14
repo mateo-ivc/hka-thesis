@@ -1,11 +1,11 @@
 #import "../meta.typ": acr-cap, acr-emph, acrpl-emph, cap-long-only, fig-platzhalter-mittel, gls, note, tab-d, tab-h
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
-= Grundlagen
+= Grundlagen <Grundlagen>
 
 Um die in den folgenden Kapiteln beschriebenen Anpassungen, sowie deren messtechnische Validierung nachvollziehen zu können, vermittelt dieses Kapitel die dafür notwendigen Grundlagen.
 
-Zunächst wird mit dem #acr-emph("OSI")-Referenzmodell die begriffliche Grundlage geschaffen, auf der alle folgenden Abschnitte aufbauen, insbesondere um #acr("TSN") und #acr("gPTP") später präzise auf Layer 2 darstellen zu können. Anschließend wird #acr("TSN") als übergeordnetes Konzept eingeordnet und das darin enthaltene Zeitsynchronisationsprotokoll IEEE 802.1AS #acr("gPTP") im Detail vorgestellt. Dessen Mechanismen, insbesondere Sync- und #gls("pdelay")[pDelay]-Nachrichten, sowie die Rolle einer Bridge bilden die normative Grundlage, gegen die die in dieser Arbeit untersuchte Implementierung validiert wird. Anschließend werden die hardwareseitigen Voraussetzungen für ein #acr("gPTP")-konformes Timestamping erläutert, insbesondere die Unterscheidung zwischen #acr("MAC")- und #acr("PHY")-Timestamping. Diese ist für die spätere Einordnung der Messergebnisse von zentraler Bedeutung. Abschließend wird das Echtzeitbetriebssystem Zephyr vorgestellt, dessen Scheduling-Verhalten, Treiberschicht und Netzwerk-Subsysteme den Rahmen bilden, innerhalb dessen die in Kapitel 4 beschriebenen Anpassungen umgesetzt wurden.
+Zunächst wird mit dem #acr-emph("OSI")-Referenzmodell die begriffliche Grundlage geschaffen, auf der alle folgenden Abschnitte aufbauen, insbesondere um #acr("TSN") und #acr("gPTP") später präzise auf Layer 2 darstellen zu können. Anschließend wird #acr("TSN") als übergeordnetes Konzept eingeordnet und das darin enthaltene Zeitsynchronisationsprotokoll IEEE 802.1AS #acr("gPTP") im Detail vorgestellt. Dessen Mechanismen, insbesondere Sync- und #gls("pdelay")[pDelay]-Nachrichten, sowie die Rolle einer Bridge bilden die normative Grundlage, gegen die die in dieser Arbeit untersuchte Implementierung validiert wird. Anschließend werden die hardwareseitigen Voraussetzungen für ein #acr("gPTP")-konformes Timestamping erläutert, insbesondere die Unterscheidung zwischen #acr("MAC")- und #acr("PHY")-Timestamping. Diese ist für die spätere Einordnung der Messergebnisse von zentraler Bedeutung. Abschließend wird das Echtzeitbetriebssystem Zephyr vorgestellt, dessen Scheduling-Verhalten, Treiberschicht und Netzwerk-Subsysteme den Rahmen bilden, innerhalb dessen die in @implementierung beschriebenen Anpassungen umgesetzt wurden.
 
 == Das ISO/OSI-Referenzmodell <osi-model>
 Um die Kommunikation zwischen Netzwerkgeräten trotz unterschiedlichster Hardware und Übertragungsmedien einheitlich beschreiben zu können, unterteilt das #acr-emph("OSI")-Referenzmodell die Netzwerkkommunikation in sieben aufeinander aufbauende Schichten (Layer). Jede Schicht übernimmt dabei eine klar abgegrenzte Aufgabe und stellt der jeweils darüberliegenden Schicht ihre Funktionalität über eine definierte Schnittstelle zur Verfügung, ohne dass diese die konkrete Umsetzung darunter kennen muss. Diese Kapselung erlaubt es, einzelne Schichten unabhängig voneinander auszutauschen oder weiterzuentwickeln.
@@ -41,19 +41,22 @@ Um die Notwendigkeit von #acr("gPTP") besser zu verstehen, muss es gegenüber de
     table.hline(stroke: 0.2pt + luma(80)),
     tab-d[Laufzeitmessung], tab-d[#acr-cap("E2E")], tab-d[#acr-cap("E2E")/#acr-cap("P2P")], tab-d[#acr-cap("P2P")],
     table.hline(stroke: 0.2pt + luma(80)),
-    tab-d[Komplexität],
-    tab-d[Einfach],
-    tab-d[Hoch],
-    tab-d[Plug-and-Play],
+    tab-d[Konfigurationsaufwand],
+    tab-d[gering],
+    tab-d[hoch (profilabhängig)],
+    tab-d[gering (festes Profil)],
     table.hline(stroke: 0.2pt + luma(80)),
     tab-d[Transportschicht], tab-d[Layer 7], tab-d[Layer 2/Layer 3&4], tab-d[Layer 2],
     table.hline(stroke: 0.2pt + luma(80)),
-    tab-d[Hardwarebedarf], tab-d[-], tab-d[#acr-cap("TSN") Hardware], tab-d[#acr-cap("TSN") Hardware ],
+    tab-d[Hardwarebedarf],
+    tab-d[keiner],
+    tab-d[Hardware-Timestamping für volle Genauigkeit],
+    tab-d[Hardware-Timestamping zwingend],
     table.hline(stroke: 0.2pt + luma(80)),
     tab-d[Ziel], tab-d[Generell], tab-d[Weiträumige Netzwerke], tab-d[lokale, zeitkritische Systeme],
     table.hline(),
   ),
-  caption: [Vergleich NTP, PTPv2 und gPTP#cap-long-only[ @ieee8021as2025[8.5]]],
+  caption: [Vergleich NTP, PTPv2 und gPTP#cap-long-only[; eigene Zusammenstellung nach @rfc5905, @ieee1588_2019 und @ieee8021as2025]],
 )<comparison-ptp-gptp>
 
 #acr("NTP") stellt das Standardverfahren für die allgemeine Systemzeitsynchronisation im IT-Bereich dar@rfc5905[1]. Es ist darauf ausgelegt, Latenzschwankungen und einzelne unzuverlässige Messungen im Internet oder in Weitverkehrsnetzen statistisch auszugleichen @rfc5905[10] @rfc5905[11.2.1]. Es toleriert dennoch Abweichungen im Millisekundenbereich@ieee8021as2025[C.3]. Für Anwendungen in der industriellen Automatisierung oder im Automobilbereich sind jedoch Genauigkeiten im Nanosekundenbereich immer häufiger von großer Bedeutung@ti_spry316.
@@ -70,12 +73,14 @@ In einer #acr("gPTP")-Domäne wird zwischen drei primären Gerätetypen untersch
 - *#acr-emph("GM"):* Die #acr("GM") bildet die oberste Zeitreferenz für die gesamte Domäne. Sie verfügt in der Regel über eine hochpräzise Zeitquelle und verteilt ihre Zeit im Netzwerk@ieee8021as2025[3.16].
 
 - *#gls("bridge")[Time-Aware Bridge]:* Auch PTP Relay Instance genannt, verbindet verschiedene Netzwerksegmente (vergleichbar mit einem Switch) und leitet Synchronisationsdaten weiter. Um Akkumulationseffekte von Verzögerungen zu vermeiden, nimmt sie eine aktive Rolle im Protokoll ein. Die Ports einer Bridge können dabei verschiedene Rollen einnehmen@ieee8021as2025[3.27]:
-  - *#gls("port-roles")[Master Port]:* Dient als Zeitquelle für das angeschlossene Netzwerk. Sendet periodisch Synchronisationsnachrichten, um das nachfolgende Gerät zu synchronisieren.
-  - *#gls("port-roles")[Slave Port]:* Empfängt die Synchronisationsnachrichten der übergeordneten Clock, um die eigene lokale Clock zu synchronisieren.
+  - *#gls("port-roles")[Master Port]*, in der aktuellen Ausgabe des Standards _TimeTransmitter Port_: Dient als Zeitquelle für das angeschlossene Netzwerk. Sendet periodisch Synchronisationsnachrichten, um das nachfolgende Gerät zu synchronisieren.
+  - *#gls("port-roles")[Slave Port]*, aktuell _TimeReceiver Port_: Empfängt die Synchronisationsnachrichten der übergeordneten Clock, um die eigene lokale Clock zu synchronisieren.
 
-- *Time-Aware Endstation:* Eine PTP Instance, die den Endpunkt der Zeitsynchronisationshierarchie darstellt. Sie empfängt die Zeitinformationen, synchronisiert ihre lokale Clock darauf, leitet diese jedoch nicht an andere Geräte weiter. Ihr Port arbeitet daher immer im Slave-Modus@ieee8021as2025[3.25].
+- *Time-Aware Endstation:* Eine PTP Instance, die den Endpunkt der Zeitsynchronisationshierarchie darstellt. Sie empfängt die Zeitinformationen, synchronisiert ihre lokale Clock darauf, leitet diese jedoch nicht an andere Geräte weiter. Ihr Port arbeitet daher immer als Slave- bzw. TimeReceiver-Port@ieee8021as2025[3.25].
 
 Welches Gerät welche dieser Rollen einnimmt, ist nicht statisch festgelegt, sondern wird im Normalbetrieb dynamisch durch den #acr-emph("BTCA") bestimmt: Alle Geräte einer Domäne tauschen dazu #gls("announce")[Announce-Nachrichten] mit vergleichbaren Qualitätsattributen ihrer Clock aus (u. a. `priority1`, Clock-Klasse und -Genauigkeit) @ieee8021as2025[8.6] und einigen sich verteilt darauf, welche Clock die beste verfügbare Referenz darstellt. Die so bestimmte Clock wird zum #gls("grandmaster")[Grandmaster]. Auf Basis dieses Vergleiches entscheidet jedes Gerät zudem selbst, in welchen Zustand die einzelnen Ports seiner Schnittstellen versetzt werden@ieee8021as2025[10.3.1.2]. In dem in @testaufbau beschriebenen Testaufbau dieser Arbeit ist der #acr("BTCA") jedoch nicht aktiv, da hier ausschließlich die Bridge-Funktionalität selbst validiert werden soll. Deshalb werden die Rollen den Geräten statisch zugewiesen.
+
+Der Name des #acr("BTCA") spiegelt dabei bereits eine Umbenennung wider, die der Standard mit seiner aktuellen Ausgabe durchgängig vollzogen hat. An die Stelle der Rollenbezeichnungen _Master_ und _Slave_ sind _timeTransmitter_ und _timeReceiver_ getreten. Die vorliegende Arbeit verwendet allerdings weiterhin die älteren Begriffe, da die untersuchte Zephyr-Implementierung sie in Bezeichnern, Konfigurationsoptionen und Logausgaben durchgängig führt und eine abweichende Benennung im Text die Zuordnung zwischen Beschreibung und Quellcode erschweren würde.
 
 === Die Sync-Nachricht
 
@@ -152,7 +157,7 @@ $
 Der `preciseOriginTimestamp` bleibt dabei unverändert, da er stets die ursprüngliche Sendezeit der Grandmaster Clock referenziert. Das `correctionField` trägt hingegen die seit dem Grandmaster akkumulierte Korrektur aus Laufzeit und Verarbeitungszeit. Da $D$ und die `residence time` jeweils mit der `rateRatio` skaliert werden, liegt das `correctionField` durchgehend in der Zeitbasis der Grandmaster Clock vor, unabhängig davon, wie viele Hops die Nachricht bereits durchlaufen hat.
 
 Die in @sync-process beschriebene Syntonisierung lässt sich auf zwei grundsätzlich unterschiedliche Arten realisieren. Entweder wird die tatsächliche Oszillatorfrequenz selbst nachgeregelt, etwa über einen spannungsgesteuerten Oszillator oder eine anpassbare #acr-emph("PLL"). Oder die physikalische Taktfrequenz bleibt fest, und stattdessen wird das Inkrement angepasst, um das der Zählerstand der Clock bei jedem Takt erhöht wird @nxp_imxrt1170_refman[60.3.8.1.1]. Letzteres Verfahren ist bei #acr("PTP")-Clocks weit verbreitet, da es sich rein digital realisieren lässt, ohne dass die Hardware-Taktquelle selbst verändert werden muss. Zephyr stellt diese Funktionalität über eine #acr-emph("API") bereit.
-Dabei kann die #acr("PTP")-Clock über den `rate_adjust()`-Callback die Rate zur Laufzeit anpassen. Die in Kapitel 4 beschriebene Implementierung nutzt diesen Mechanismus.
+Dabei kann die #acr("PTP")-Clock über den `rate_adjust()`-Callback die Rate zur Laufzeit anpassen. Die in @bridge-sync-impl beschriebene Implementierung nutzt diesen Mechanismus.
 
 == Hardware Grundlagen <hardware-basics>
 Die in den vorangegangenen Abschnitten beschriebenen Synchronisations- und Messmechanismen setzen voraus, dass die beteiligten #gls("timestamp")[Zeitstempel] mit einer dem geforderten Sub-Mikrosekundenbereich entsprechenden Genauigkeit erfasst werden. Dieses Kapitel beleuchtet die dafür notwendigen Hardware-Grundlagen. Zunächst wird die #acr-emph("MAC")-Schicht als die Komponente eingeführt, in der sowohl das Timestamping als auch die im Anschluss vorgestellte Verkehrsformung stattfinden. Anschließend wird erläutert, warum reines Software-Timestamping für #acr("gPTP") ungeeignet ist und stattdessen spezialisierte Netzwerk-Hardware benötigt wird, sowie die Unterscheidung zwischen #acr("PHY")- und #acr("MAC")-Timestamping als zwei mögliche Realisierungsvarianten dieses Hardware-Timestampings im Detail betrachtet. Abschließend wird mit dem Credit Based Shaping der in @tsn-intro angekündigte #acr-emph("AVB")-Mechanismus vorgestellt, mit dem die #acr("MAC")-Schicht die geforderte Bounded Latency durchsetzt.
@@ -222,9 +227,9 @@ Um die Integration von Protokollen wie #acr("gPTP") zu ermöglichen und die prä
 - Ergänzt wird dies durch *#acr("PTP")-Clock-Treiber*, über welche die Hardware-Timer, die als Referenz für die lokale Zeit dienen, dem System zur Verfügung gestellt und von der #acr("gPTP")-Logik synchronisiert werden können @zephyr_ptp_clock_api. Diese Treiber kapseln die spezifischen Registerzugriffe der Hardware.
 
 === Die Treiberschicht
-Die im vorherigen Abschnitt genannten #acrpl-emph("API") setzen auf dem allgemeinen Zephyr-Treibermodell auf, das die unterste Schicht des Netzwerkstacks bildet und den eigentlichen Kontakt zur Hardware herstellt. Da dieses Modell für die in Kapitel 4 beschriebenen Anpassungen am Ethernet-Treiber unmittelbar relevant ist, wird es im Folgenden kurz umrissen.
+Die im vorherigen Abschnitt genannten #acrpl-emph("API") setzen auf dem allgemeinen Zephyr-Treibermodell auf, das die unterste Schicht des Netzwerkstacks bildet und den eigentlichen Kontakt zur Hardware herstellt. Da dieses Modell für die in @impl-lastschutz beschriebenen Anpassungen am Ethernet-Treiber unmittelbar relevant ist, wird es im Folgenden kurz umrissen.
 
-Ein Treiber bündelt in Zephyr Konfiguration (z. B. Registeradressen, üblicherweise aus dem Device Tree generiert), Laufzeitzustand und eine API mit Funktionszeigern auf die eigentlichen Treiberoperationen (z. B. Senden, Empfangen) @zephyr_drivers. Diese Trennung erlaubt es, dieselbe Treiberimplementierung für mehrere Hardware-Instanzen wiederzuverwenden, die sich nur in Konfiguration und Zustand unterscheiden. Dies ist  für die beiden ENET-Instanzen `enet` und `enet1g` relevant, die in Kapitel 4 unabhängig voneinander angesprochen werden. Höhere Schichten des Netzwerkstacks kommunizieren dabei nie direkt mit der Hardware, sondern ausschließlich über diese treiberseitige API @zephyr_net_l2.
+Ein Treiber bündelt in Zephyr Konfiguration (z. B. Registeradressen, üblicherweise aus dem Device Tree generiert), Laufzeitzustand und eine API mit Funktionszeigern auf die eigentlichen Treiberoperationen (z. B. Senden, Empfangen) @zephyr_drivers. Diese Trennung erlaubt es, dieselbe Treiberimplementierung für mehrere Hardware-Instanzen wiederzuverwenden, die sich nur in Konfiguration und Zustand unterscheiden. Dies ist für die beiden ENET-Instanzen `enet` und `enet1g` relevant, die in @implementierung unabhängig voneinander angesprochen werden. Höhere Schichten des Netzwerkstacks kommunizieren dabei nie direkt mit der Hardware, sondern ausschließlich über diese treiberseitige API @zephyr_net_l2.
 
 In der Praxis läuft diese Kommunikation über zwei Einstiegspunkte. Beim Senden reicht der Stack ein fertiges Paket an die Sende-Funktion des Treibers durch, der es an die Hardware übergibt. Beim Empfang übernimmt der Treiber ein eingetroffenes Frame von der Hardware und reicht es zur weiteren Verarbeitung an den Stack weiter @zephyr_net_l2.
 

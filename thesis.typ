@@ -64,7 +64,10 @@
 #init-glossary((
   "domain": ("gPTP-Domäne", [Netzwerkbereich mit gemeinsamer Zeitbasis]),
   "bridge": ("Time-Aware Bridge", [Zeitbewusste Bridge]),
-  "port-roles": ("Master-Port / Slave-Port", [Sende-Port / Empfangs-Port einer Bridge]),
+  "port-roles": (
+    "Master-Port / Slave-Port",
+    [Sende-/Empfangs-Port einer Bridge; aktuell TimeTransmitter-/TimeReceiver-Port],
+  ),
   "announce": ("Announce-Nachricht", [Ankündigungsnachricht (Clock-Qualität)]),
   "step-mode": ("Two-Step-/Single-Step-Verfahren", [Zwei-Schritt-/Ein-Schritt-Verfahren]),
   "pdelay": ("Peer-Delay-Mechanismus (pDelay)", [Peer-Verzögerungsmessung]),
@@ -87,6 +90,10 @@
   "interrupt-handling": ("Interrupt-Handling", [Reaktion auf einen Hardware-Interrupt]),
   "scheduling": ("Scheduling", [Zuteilung der Rechenzeit durch das Betriebssystem]),
   "frame": ("Frame", [Übertragungseinheit auf Ethernet-Ebene]),
+  "statsRxFifoOverflowErr": ("statsRxFifoOverflowErr", [MAC interner FIFO overflow]),
+  "statsRxDropInvalidSFD": ("statsRxDropInvalidSFD", [Frame wegen ungültigem SFD) verworfen]),
+  "statsRxCrcErr": ("statsRxDropInvalidSFD", [fehlerhafte Prüfsumme]),
+  "statsRxAlignErr": ("statsRxDropInvalidSFD", [fehlerhafte Byte-Ausrichtung]),
 ))
 
 #set text(font: "Cambria")

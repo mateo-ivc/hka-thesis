@@ -32,7 +32,7 @@
 #let print-glossary(
   sorted: "up",
   case-sensitive: true,
-  row-gutter: 0.5em,
+  row-gutter: 1em,
   column-ratio: 0.5,
   used-only: true,
 ) = {
