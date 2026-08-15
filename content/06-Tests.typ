@@ -65,7 +65,7 @@ Die Einschwingzeiten unterscheiden sich erheblich, was die in @nachweis-raterati
   caption: [residenceTime und Phasenfehler der Bridge, Basisvalidierung Einzelbridge],
 ) <fig-basisvalidierung-residence>
 
-Die Bridge benötigt im Durchschnitt $5,19"ms"$, um eine Sync-Nachricht weiterzuleiten. Bei einem Sync-Intervall von $125"ms"$ entspricht dies rund $4%$ des Intervalls. Damit ist zugleich die in @normative-leistungsanforderungen abgeleitete normative Obergrenze von $10"ms"$ je PTP Relay Instance eingehalten. Allerdings mit nur rund der Hälfte des Budgets als Reserve. Für eine reine Software-Weiterleitung ist das ein erwartbarer, für die Beurteilung der Praxistauglichkeit aber wesentlicher Befund, der in @limitationen wieder aufgegriffen wird.
+Die Bridge benötigt im Durchschnitt $5,19"ms"$ und maximal $8,68"ms"$, um eine Sync-Nachricht weiterzuleiten. Bei einem Sync-Intervall von $125"ms"$ entspricht dies rund $4%$ des Intervalls. Damit ist zugleich die in @normative-leistungsanforderungen abgeleitete normative Obergrenze von $10"ms"$ je PTP Relay Instance eingehalten. Allerdings mit nur rund der Hälfte des Budgets als Reserve. Für eine reine Software-Weiterleitung ist das ein erwartbarer, für die Beurteilung der Praxistauglichkeit aber wesentlicher Befund, der in @limitationen wieder aufgegriffen wird.
 
 Für die Synchronisationsgenauigkeit selbst ist diese vergleichsweise lange Verweilzeit zunächst unkritisch, da jede Sync-Nachricht ihren eigenen, individuell gemessenen Wert im `correctionField` mitführt und der Empfänger ihn vollständig herausrechnet. Entscheidend ist deshalb nicht die Höhe der `residenceTime`, sondern die Genauigkeit ihrer Messung und genau diese wird durch die beiden Fehlerarten des internen Servos begrenzt.
 
@@ -107,7 +107,7 @@ Alle Läufe finden unter denselben Idealbedingungen wie in @basisvalidierung sta
 
 === Ergebnisse
 
-Analog zur Basisvalidierung wird je Ausbaustufe zunächst der zeitliche Offsetverlauf und anschließend die Verteilung im eingeschwungenen Zustand betrachtet. Die 1. Stufe mit nur einer Bridge wurde bereits in @basisvalidierung ausgewertet. Die folgenden beiden Abschnitte ergänzen Stufe 2 und Stufe 3. Kanal 2 und 3 des Oszilloskops liegen dabei jeweils an Slave- und Master-Port der letzten Bridge in der Kette an, Kanal 4 durchgehend am Endpoint. \ \ \ \ \ \ \ \
+Analog zur Basisvalidierung wird je Ausbaustufe zunächst der zeitliche Offsetverlauf und anschließend die Verteilung im eingeschwungenen Zustand betrachtet. Die 1. Stufe mit nur einer Bridge wurde bereits in @basisvalidierung ausgewertet. Die folgenden beiden Abschnitte ergänzen Stufe 2 und Stufe 3. Kanal 2 und 3 des Oszilloskops liegen dabei jeweils an Slave- und Master-Port der letzten Bridge in der Kette an, Kanal 4 durchgehend am Endpoint.
 
 *Stufe 2 (GM $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Endpoint)*
 

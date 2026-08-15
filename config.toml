@@ -2,7 +2,7 @@
 # Wird von meta.typ via toml() eingelesen. Felder ohne zweiten Pruefer/Betreuer
 # leer lassen ("") — dann werden sie auf dem Cover ausgeblendet.
 
-is-draft = true                 # true: DRAFT-Wasserzeichen + Anmerkungen sichtbar
+is-draft = false                 # true: DRAFT-Wasserzeichen + Anmerkungen sichtbar
 is-two-sided = false            # true: doppelseitiges Layout (gerade/ungerade)
 
 author = "Mateo Ivankovic"

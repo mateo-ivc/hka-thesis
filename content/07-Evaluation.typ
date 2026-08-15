@@ -62,7 +62,7 @@
 
     tab-d[#req("A8")],
     tab-d[Frequenzabweichung des bridge-internen Zeitabgleichs $<=0,1$#acr("ppm")],
-    tab-d[$sigma_y (tau_0) = 28,5$#acr("ppb") (@tab-basisvalidierung-rateratio); Beitrag zum Fehlerbudget $0,15"ns"$ (@basisvalidierung)],
+    tab-d[$sigma_y (tau_0) = 28,5$#acr("ppb") (@tab-basisvalidierung-rateratio)(@basisvalidierung)],
     tab-d[Erfüllt],
     table.hline(),
   ),
