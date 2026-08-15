@@ -6,16 +6,16 @@ Aufbauend auf den in @Grundlagen vorgestellten Grundlagen leitet dieses Kapitel 
 
 == Anforderungen
 
-Eine konforme #acr-emph("gPTP")-Implementierung muss mehr leisten, als nur die in Annex B des Standards genannten Zeitgrenzwerte einzuhalten. Dieser Abschnitt gliedert die für die Arbeit relevanten Anforderungen deshalb in vier Gruppen: die normativen Leistungsanforderungen aus Annex B selbst, die normative Obergrenze der `residence time`, die Robustheit der Synchronisierung unter Netzwerklast, sowie die sich aus dem Testaufbau ergebenden Hardwareanforderungen. @tab-anforderungen fasst die daraus abgeleiteten Einzelanforderungen am Ende des Abschnitts zusammen und vergibt die Bezeichner, auf die sich die Erfüllungsmatrix in @erfuellungsmatrix später bezieht.
+Eine konforme #acr-emph("gPTP")-Implementierung muss mehr leisten, als nur die in Annex B des Standards genannten Zeitgrenzwerte einzuhalten. Dieser Abschnitt gliedert die für die Arbeit relevanten Anforderungen deshalb in vier Gruppen: die normativen Leistungsanforderungen aus Annex B selbst, die normative Obergrenze der `residenceTime`, die Robustheit der Synchronisierung unter Netzwerklast, sowie die sich aus dem Testaufbau ergebenden Hardwareanforderungen. @tab-anforderungen fasst die daraus abgeleiteten Einzelanforderungen am Ende des Abschnitts zusammen und vergibt die Bezeichner, auf die sich die Erfüllungsmatrix in @erfuellungsmatrix später bezieht.
 
 === Normative Leistungsanforderungen <normative-leistungsanforderungen>
 Der Standard macht die Synchronisierung eines Ports von der Variable `asCapable` abhängig @ieee8021as2025[10.2.5.1]. Nur wenn sie `TRUE` ist, verarbeitet die Sync-Statemachine überhaupt eingehende Sync-Nachrichten @ieee8021as2025[11.2.2]. Ist sie `FALSE`, verwirft die Bridge jede Sync-Nachricht. Unter anderem hängt `asCapable` vom gemessenen meanLinkDelay ab @ieee8021as2025[11.2.2]. Überschreitet dieser $800n s$ (100BASE-TX/1000BASE-T), geht der Standard von Equipment ohne #acr("gPTP")-Unterstützung im Pfad aus und setzt `asCapable` auf `FALSE`.
 
-Ist `asCapable` TRUE, hängt die tatsächlich erreichte Genauigkeit von zwei weiteren, unabhängigen Anforderungen ab. Die Granularität der LocalClock darf $40n s$ nicht überschreiten @ieee8021as2025[B.1.2] und die Messgenauigkeit der rateRatio muss innerhalb von $0,1$ #acr("ppm") liegen @ieee8021as2025[B.2.4]. Eine gröbere Granularität würde bereits die zugrundeliegenden Zeitstempel verfälschen, eine ungenauere rateRatio-Messung dagegen sowohl die Skalierung von Leitungsverzögerung und `residence time` im `correctionField` als auch die Syntonisierung des Empfängers.
+Ist `asCapable` TRUE, hängt die tatsächlich erreichte Genauigkeit von zwei weiteren, unabhängigen Anforderungen ab. Die Granularität der LocalClock darf $40n s$ nicht überschreiten @ieee8021as2025[B.1.2] und die Messgenauigkeit der rateRatio muss innerhalb von $0,1$ #acr("ppm") liegen @ieee8021as2025[B.2.4]. Eine gröbere Granularität würde bereits die zugrundeliegenden Zeitstempel verfälschen, eine ungenauere rateRatio-Messung dagegen sowohl die Skalierung von Leitungsverzögerung und `residenceTime` im `correctionField` als auch die Syntonisierung des Empfängers.
 
 Werden diese Anforderungen eingehalten, gilt die eigentliche Zielgröße dieser Arbeit. Die #acr-emph("E2E")-Synchronisationsgenauigkeit von $<=1mu s$ über bis zu sieben Hops @ieee8021as2025[B.3], allerdings ausdrücklich nur "during steady-state operation", was bedeutet, dass die Einschwingphase hier nicht beachtet wird @ieee8021as2025[B.3].
 
-Neben den Genauigkeitsgrenzen begrenzt der Standard auch die Zeit, die eine Nachricht innerhalb einer PTP Relay Instance verbringen darf. Die `residence time` einer Bridge darf $10"ms"$ nicht überschreiten @ieee8021as2025[B.2.2].
+Neben den Genauigkeitsgrenzen begrenzt der Standard auch die Zeit, die eine Nachricht innerhalb einer PTP Relay Instance verbringen darf. Die `residenceTime` einer Bridge darf $10"ms"$ nicht überschreiten @ieee8021as2025[B.2.2].
 Für die vorliegende Arbeit ist diese Anforderung besonders relevant, weil die untersuchte Implementierung die Weiterleitung rein in Software durchführt.
 
 === Frequenzgenauigkeit des bridge-internen Zeitabgleichs <anforderung-interner-abgleich>
@@ -67,7 +67,7 @@ Neben den normativen Leistungsanforderungen ergeben sich aus dem gewählten Test
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[A5 #label("a5")],
-    tab-d[`residence time` je PTP Relay Instance $<=10"ms"$],
+    tab-d[`residenceTime` je PTP Relay Instance $<=10"ms"$],
     tab-d[normativ @ieee8021as2025[11.1.3]],
     table.hline(stroke: 0.2pt + luma(80)),
 
@@ -90,11 +90,21 @@ Neben den normativen Leistungsanforderungen ergeben sich aus dem gewählten Test
 ) <tab-anforderungen>
 
 == Grundlegender Testaufbau <testaufbau>
-Für die nachfolgenden Tests werden drei phyBOARD-Atlas-Boards@phytec_imxrt1170_devkit als Bridge eingesetzt. Jedes Board verfügt über zwei Ethernet-Ports mit unterschiedlichem #acr("PHY"). Der 1GBit/s-Port nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung @ti_dp83867e, der 100/10MBit/s-Port hingegen einen #acr("PHY") ohne #acr("SFD")-Erkennung @microchip_ksz8081. Auf jeder Bridge liegt der #acr("gPTP")-Slave-Port dabei fest auf dem #acr("SFD")-fähigen 1GBit/s-Port (`enet1g`), der Master-Port entsprechend auf dem 100/10MBit/s-Port (`enet`) ohne #acr("SFD")-Erkennung. Da Letzterer die Verbindung zum jeweils nächsten Hop bildet, ist jede Inter-Bridge-Strecke in der Kette damit unabhängig von der auf der Gegenseite verfügbaren Gigabit-Bandbreite auf $100"Mbit/s"$ begrenzt. Des Weiteren werden zwei STM32H7-Boards@st_nucleo_h755zi_q eingesetzt, von denen eines als Grandmaster Clock und das andere als Endpoint fungieren soll. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten, was jedoch das Abschalten des #acr("BTCA") erzwingt, um den einzelnen Systemen ihre feste Rolle zuzuweisen.
 
-Als _Hop_ wird in dieser Arbeit durchgehend eine einzelne Verbindung zwischen zwei benachbarten PTP-Instanzen bezeichnet, entsprechend der Zählweise, die dem in @normative-leistungsanforderungen genannten Grenzwert von sieben Hops zugrunde liegt. Eine Kette aus $n$ Bridges zwischen Grandmaster und Endpoint besitzt damit $n+1$ Hops: Der Aufbau Grandmaster $<->$ Bridge 1 $<->$ Endpoint umfasst zwei Hops, der maximale Aufbau dieser Arbeit mit drei Bridges entsprechend vier Hops. Die vom Standard vorgesehene maximale Kettenlänge von sieben Hops entspricht folglich sechs kaskadierten Bridges.
+#figure(
+  image("../assets/Testaufbau.jpg", width: 100%),
+  caption: [Testaufbau dieser Arbeit mit 3 phyBOARD-Atlas-Boards als Bridge, ein STM32H7 als Grandmaster und ein STM32H7 als Endpoint],
+) <fig-testaufbau>
 
-Die beiden Ports des phyBOARD-Atlas weisen bei den in @mac-layer und @cbs behandelten #acr("CBS")-Mechanismen Unterschiede auf. Während die #acr("MAC")-Peripherie des 1GBit/s-Ports (`enet1g`) einen Credit Based Shaper unterstützt @zephyr_eth_nxp_enet_source, fehlt dem 100/10MBit/s-Port beider Geräte eine entsprechende Hardware-Warteschlange. Dies bedeutet, dass zwar alle Schnittstellen beider Geräte die Zeitsynchronisierung unterstützen, jedoch nur der enet1g-Port des phyBOARD-Atlas über geeignete Hardware für #acr("TSN")-Support im weiteren Sinne verfügt.
+Wie in @fig-testaufbau  zu sehen werden die nachfolgenden Tests mit drei phyBOARD-Atlas-Boards@phytec_imxrt1170_devkit als Bridge eingesetzt und zwei STM32H7@st_nucleo_h755zi_q als Grandmaster und Endpoint verwendet.
+
+Das phyBOARD-Atlas verfügt über zwei Ethernet-Ports mit unterschiedlichem #acr("PHY"). Der 1GBit/s-Port (`enet1g`) nutzt einen #acr("PHY") mit #acr("SFD")-Erkennung @ti_dp83867e, während der 100/10MBit/s-Port (`enet`) hingegen einen #acr("PHY") ohne #acr("SFD")-Erkennung@microchip_ksz8081 verwendet. Auf jeder Bridge liegt der #acr("gPTP")-Slave-Port dabei fest auf dem #acr("SFD")-fähigen `enet1g`-Instanz, der Master-Port entsprechend auf dem `enet`-Instanz ohne #acr("SFD")-Erkennung. Da Letzterer die Verbindung zum jeweils nächsten Hop bildet, ist jede Inter-Bridge-Strecke in der Kette damit unabhängig von der auf der Gegenseite verfügbaren Gigabit-Bandbreite auf $100"Mbit/s"$ begrenzt.
+
+Die zwei eingesetzt STM32H7-Boards, werden wie bereits erwähtn als Grandmaster und Endpoint fungieren. Beide verfügen ebenfalls über einen 10/100MBit/s-#acr("PHY") ohne #acr("SFD")-Erkennung. Durch diese Kombination lässt sich ein Testaufbau mit maximal vier Hops gestalten, was jedoch das Abschalten des #acr("BTCA") erzwingt, um den einzelnen Systemen ihre feste Rolle zuzuweisen.
+
+Als _Hop_ wird in dieser Arbeit durchgehend eine einzelne Verbindung zwischen zwei benachbarten PTP-Instanzen bezeichnet, entsprechend der Zählweise, die dem in @normative-leistungsanforderungen genannten Grenzwert von sieben Hops zugrunde liegt. Eine Kette aus $n$ Bridges zwischen Grandmaster und Endpoint besitzt damit $n+1$ Hops. Der Aufbau Grandmaster $<->$ Bridge 1 $<->$ Endpoint umfasst zwei Hops, der maximale Aufbau dieser Arbeit mit drei Bridges entsprechend vier Hops. Die vom Standard vorgesehene maximale Kettenlänge von sieben Hops entspricht folglich sechs kaskadierten Bridges.
+
+Die beiden Ports des phyBOARD-Atlas weisen bei den in @mac-layer und @cbs behandelten #acr("CBS")-Mechanismen Unterschiede auf. Während die #acr("MAC")-Peripherie des `enet1g`-Instanz einen Credit Based Shaper unterstützt @zephyr_eth_nxp_enet_source, fehlt der `enet`-Instanz beider Geräten eine entsprechende Hardware-Warteschlange. Dies bedeutet, dass zwar alle Schnittstellen die Zeitsynchronisierung unterstützen, jedoch nur die `enet1g`-Instanz über geeignete Hardware für #acr("TSN")-Support im weiteren Sinne verfügt.
 
 Zusätzlich verfügt jede Ethernet-Schnittstelle über einen eigenen #acr("MAC") und somit auch über eine eigene #acr("PTP")-Clock. Daher ist die relative Zeit von Port zu Port immer unterschiedlich. Im #acr("gPTP")-Stack wird allerdings immer nur die Clock zum zugehörigen Port synchronisiert. Dies führt dazu, dass der Master-Port auf der Bridge nicht synchronisiert ist und dadurch die nachfolgenden Systeme nicht korrekt synchronisieren kann. Um dieses Problem zu lösen, wird ein dedizierter Task in Zephyr erstellt, der sich um das Synchronisieren des Master-Ports zum Slave-Port auf der Bridge kümmert. Die Implementierung dieses Tasks beschreibt @bridge-sync-impl.
 

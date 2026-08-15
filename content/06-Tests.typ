@@ -65,7 +65,9 @@ Die Einschwingzeiten unterscheiden sich erheblich, was die in @nachweis-raterati
   caption: [residenceTime und Phasenfehler der Bridge, Basisvalidierung Einzelbridge],
 ) <fig-basisvalidierung-residence>
 
-Die Bridge benötigt im Durchschnitt $5,19"ms"$ und maximal $8,68"ms"$, um eine Sync-Nachricht weiterzuleiten. Bei einem Sync-Intervall von $125"ms"$ entspricht dies rund $4%$ des Intervalls. Damit ist zugleich die in @normative-leistungsanforderungen abgeleitete normative Obergrenze von $10"ms"$ je PTP Relay Instance eingehalten. Allerdings mit nur rund der Hälfte des Budgets als Reserve. Für eine reine Software-Weiterleitung ist das ein erwartbarer, für die Beurteilung der Praxistauglichkeit aber wesentlicher Befund, der in @limitationen wieder aufgegriffen wird.
+Die Bridge benötigt im Mittel $5,19"ms"$ und maximal $8,68"ms"$, um eine Sync-Nachricht weiterzuleiten. Beide Werte beziehen sich nach @statistische-auswertung auf das Auswertungsintervall ab $t_"set"$ und schließen die Einschwingphase damit aus. Bei einem Sync-Intervall von $125"ms"$ entspricht der Mittelwert rund $4%$ des Intervalls.
+
+Da der Standard die `residenceTime` als Obergrenze je weitergeleiteter Nachricht formuliert, ist für den Nachweis nicht der Mittelwert, sondern der beobachtete Maximalwert maßgeblich. Mit $8,68"ms"$ schöpft die Bridge $86,8%$ des zulässigen Budgets aus, sodass eine Reserve von rund $1,3"ms"$ verbleibt. Die in @normative-leistungsanforderungen genannte Obergrenze von $10"ms"$ je PTP Relay Instance ist damit eingehalten, allerdings mit deutlich geringerem Abstand, als der Mittelwert nahelegt. Für eine reine Software-Weiterleitung ist diese Größenordnung erwartbar.
 
 Für die Synchronisationsgenauigkeit selbst ist diese vergleichsweise lange Verweilzeit zunächst unkritisch, da jede Sync-Nachricht ihren eigenen, individuell gemessenen Wert im `correctionField` mitführt und der Empfänger ihn vollständig herausrechnet. Entscheidend ist deshalb nicht die Höhe der `residenceTime`, sondern die Genauigkeit ihrer Messung und genau diese wird durch die beiden Fehlerarten des internen Servos begrenzt.
 
@@ -124,7 +126,7 @@ Wie schon in der Basisvalidierung durchlaufen alle drei Messpunkte zu Beginn ein
 ) <fig-mehrhop-stufe2-boxplot>
 
 Im ausgewerteten Fenster ab $t_"set"$ liegen Median und Interquartilsabstand am Slave-Port von Bridge 2 bei $-5,8"ns"$ bzw. $58,3"ns"$ ($n=876$), am Master-Port bei $25,4"ns"$ bzw. $64,1"ns"$ ($n=840$) und am Endpoint bei $-288,0"ns"$ bzw. $70,7"ns"$ ($n=909$). Damit bleibt die #acr-emph("E2E")-Genauigkeit über drei Hops deutlich innerhalb des $1mu s$-Toleranzbands.
-\ \ \ \ \ \ \ \ \ \ \ \
+
 *Stufe 3 (GM $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Bridge 3 $<->$ Endpoint)*
 
 #figure(

@@ -101,7 +101,7 @@ Bei dem im @sync-mechanism (linke Seite) dargestellten Two-Step-Verfahren erfolg
 
   - *`preciseOriginTimestamp`:* Der zuvor auf Master-Seite erfasste Sendezeitpunkt $t_s$, ausgedrückt in der Zeitbasis der Grandmaster Clock. Er bildet die eigentliche Referenzzeit, auf die sich alle weiteren Korrekturen beziehen@ieee8021as2025[10.2.2].
 
-  - *`correctionField`:* Ein von der Grandmaster Clock mit dem Wert "0" initialisierter Korrekturwert, der auf dem Weg zum Slave alle Verzögerungen aufsummiert, die im `preciseOriginTimestamp` noch nicht enthalten sind. Besonders die gemessene #gls("path-delay")[Leitungsverzögerung], die eine Nachricht über zwischengeschaltete Bridges akkumuliert (#gls("residence-time")[`residence time`]), darf hier nicht missachtet werden. Damit lässt sich der tatsächliche Sendezeitpunkt der Grandmaster Clock trotz dieser Verzögerungen exakt rekonstruieren@ieee8021as2025[10.2.2].
+  - *`correctionField`:* Ein von der Grandmaster Clock mit dem Wert "0" initialisierter Korrekturwert, der auf dem Weg zum Slave alle Verzögerungen aufsummiert, die im `preciseOriginTimestamp` noch nicht enthalten sind. Besonders die gemessene #gls("path-delay")[Leitungsverzögerung], die eine Nachricht über zwischengeschaltete Bridges akkumuliert (#gls("residence-time")[`residenceTime`]), darf hier nicht missachtet werden. Damit lässt sich der tatsächliche Sendezeitpunkt der Grandmaster Clock trotz dieser Verzögerungen exakt rekonstruieren@ieee8021as2025[10.2.2].
 
   - *#gls("rateratio")[`rateRatio`]:* Das Verhältnis der Frequenz der Grandmaster Clock zur Frequenz der lokalen Clock des Slaves. Ausgehend vom Wert eins bei der Grandmaster Clock wird sie über jeden Hop hinweg fortgeschrieben und beschreibt so stets das aktuelle Frequenzverhältnis zur ursprünglichen Zeitquelle (siehe Abschnitt „Die #acr("gPTP") Bridge"). Neben der Offset-Korrektur erlaubt sie dem Slave dadurch auch, seine lokale Taktrate an die des Masters anzupassen@ieee8021as2025[10.2.2].
 
@@ -145,12 +145,12 @@ Damit die Bridge eine eingehende Sync-Nachricht korrekt an ihre Master-Ports wei
 
 1. *Empfangen auf dem Slave-Port:* Die Bridge empfängt die Sync-Nachricht und erfasst analog zum in @sync-mechanism dargestellten Sync-Verfahren den Empfangszeitpunkt $t_r$.
 
-2. *Messung der `residence time`:* Bevor die Bridge die Nachricht weiterleiten kann, durchläuft diese intern den Netzwerk-Stack des Geräts. Die dafür benötigte Zeitspanne bis zum Absenden auf dem Master-Port zum Zeitpunkt $t_s$ wird als `residence time` bezeichnet und ergibt sich aus $t_s - t_r$.
+2. *Messung der `residence time`:* Bevor die Bridge die Nachricht weiterleiten kann, durchläuft diese intern den Netzwerk-Stack des Geräts. Die dafür benötigte Zeitspanne bis zum Absenden auf dem Master-Port zum Zeitpunkt $t_s$ wird als `residenceTime` bezeichnet und ergibt sich aus $t_s - t_r$.
 
 3. *Aktualisierung der `rateRatio`:* Die Bridge verknüpft die im Follow_Up empfangene `rateRatio` mit der über den in @pDelay-mechanism beschriebenen pDelay-Mechanismus lokal gemessenen `neighborRateRatio` (dem Frequenzverhältnis zur Master Clock): $ "rateRatio"_("neu") = "rateRatio"_("alt") dot "neighborRateRatio" $
   Dadurch bleibt die `rateRatio` über beliebig viele Hops hinweg gültig und beschreibt stets das Frequenzverhältnis zwischen der Grandmaster Clock und der lokalen Clock der Bridge.@ieee8021as2025[11.1.3]
 
-4. *Aktualisierung des `correctionField`:* Zum eingehenden `correctionField` addiert die Bridge sowohl die gemessene Leitungsverzögerung $D$ (skaliert mit der eingehenden `rateRatio`) als auch die zuvor ermittelte `residence time` (skaliert mit der soeben aktualisierten `rateRatio`)@ieee8021as2025[11.1.3]:
+4. *Aktualisierung des `correctionField`:* Zum eingehenden `correctionField` addiert die Bridge sowohl die gemessene Leitungsverzögerung $D$ (skaliert mit der eingehenden `rateRatio`) als auch die zuvor ermittelte `residenceTime` (skaliert mit der soeben aktualisierten `rateRatio`)@ieee8021as2025[11.1.3]:
 $
   "correctionField"_("neu") = "correctionField"_("alt") + D dot "rateRatio"_("alt") + (t_s - t_r) dot "rateRatio"_("neu")
 $

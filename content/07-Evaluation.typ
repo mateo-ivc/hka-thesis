@@ -44,8 +44,8 @@
 
     tab-d[#req("A5")],
     tab-d[`residence time` $<=10"ms"$ je Bridge],
-    tab-d[Gemessen: $5,19"ms"$ im Mittel (@basisvalidierung)],
-    tab-d[Erfüllt, Reserve rund $50%$],
+    tab-d[Maßgeblich ist der Maximalwert: $8,68"ms"$ (Mittel $5,19"ms"$) im eingeschwungenen Zustand (@basisvalidierung)],
+    tab-d[Erfüllt, $86,8%$ des Budgets; nur unbelastet nachgewiesen],
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[#req("A6")],
@@ -80,5 +80,7 @@ Die vorstehenden Ergebnisse gelten innerhalb eines klar umrissenen Rahmens, dess
 *Kettenlänge.* Der Nachweis der #acr-emph("E2E")-Synchronisationsgenauigkeit (#req("A4")) stützt sich auf zwei, drei und vier Hops, während die vom Standard vorgesehene maximale Kettenlänge von sieben Hops entspricht. Da der beobachtete Offset mit jeder Bridge in dieselbe Richtung wächst, ist die Hochrechnung nicht zu ignorieren. Die lineare Fortschreibung in @mehrhop-validierung führt bei sieben Hops auf rund $88%$ des Toleranzbands. Die Arbeit weist die Anforderung damit für die realisierten Ausbaustufen nach, nicht für den vom Standard adressierten Maximalfall.
 
 *Aussagekraft des Lastszenarios.* Da von den eingesetzten Ethernet-Instanzen nur `enet1g` die benötigten #acr("TSN")-Mechanismen bereitstellt (@testaufbau), ließ sich die Last ausschließlich in eine Richtung und nur an einem einzelnen Port erzeugen. Der Nachweis der Robustheit (#req("A6")) gilt damit für diesen einen Betriebspunkt, nicht für beidseitige Last über die gesamte Kette.
+
+*Betriebspunkt der `residenceTime`.* Der Nachweis von #req("A5") stützt sich ausschließlich auf den unbelasteten Einzelbridge-Lauf aus @basisvalidierung. Da die Weiterleitung rein in Software erfolgt, ist unter CPU- und Pufferlast eine Zunahme der Verweilzeit zu erwarten, während der gemessene Maximalwert bereits $86,8%$ des zulässigen Budgets ausschöpft. Ob die Obergrenze von $10"ms"$ auch unter der in @netzwerklast-test erzeugten Last eingehalten wird, ist noch zu beweisen.
 
 *Nicht quantifizierte Fehlerquelle.* Die in @Ungenauigkeiten beschriebene #acr-emph("PHY")-Asymmetrie erklärt den beobachteten Offset am plausibelsten. Solange sie nicht durch eine eigene Messreihe der Ein- und Ausgangslatenzen beider #acrpl("PHY") beziffert ist, bleibt die Erklärung des Mehrhop-Verhaltens qualitativ.
