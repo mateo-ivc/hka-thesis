@@ -11,12 +11,19 @@ Eine konforme #acr-emph("gPTP")-Implementierung muss mehr leisten, als nur die i
 === Normative Leistungsanforderungen <normative-leistungsanforderungen>
 Der Standard macht die Synchronisierung eines Ports von der Variable `asCapable` abhängig @ieee8021as2025[10.2.5.1]. Nur wenn sie `TRUE` ist, verarbeitet die Sync-Statemachine überhaupt eingehende Sync-Nachrichten @ieee8021as2025[11.2.2]. Ist sie `FALSE`, verwirft die Bridge jede Sync-Nachricht. Unter anderem hängt `asCapable` vom gemessenen meanLinkDelay ab @ieee8021as2025[11.2.2]. Überschreitet dieser $800n s$ (100BASE-TX/1000BASE-T), geht der Standard von Equipment ohne #acr("gPTP")-Unterstützung im Pfad aus und setzt `asCapable` auf `FALSE`.
 
-Ist `asCapable` TRUE, hängt die tatsächlich erreichte Genauigkeit von zwei weiteren, unabhängigen Anforderungen ab. Die Granularität der LocalClock darf $40n s$ nicht überschreiten @ieee8021as2025[B.1.2], und die Messgenauigkeit der rateRatio muss innerhalb von $0.1$ #acr("ppm") liegen @ieee8021as2025[B.2.4]. Eine gröbere Granularität würde bereits die zugrundeliegenden Zeitstempel verfälschen, eine ungenauere rateRatio-Messung den #acr("PI")-geregelten Frequenzabgleich zwischen den Clocks.
+Ist `asCapable` TRUE, hängt die tatsächlich erreichte Genauigkeit von zwei weiteren, unabhängigen Anforderungen ab. Die Granularität der LocalClock darf $40n s$ nicht überschreiten @ieee8021as2025[B.1.2] und die Messgenauigkeit der rateRatio muss innerhalb von $0,1$ #acr("ppm") liegen @ieee8021as2025[B.2.4]. Eine gröbere Granularität würde bereits die zugrundeliegenden Zeitstempel verfälschen, eine ungenauere rateRatio-Messung dagegen sowohl die Skalierung von Leitungsverzögerung und `residence time` im `correctionField` als auch die Syntonisierung des Empfängers.
 
 Werden diese Anforderungen eingehalten, gilt die eigentliche Zielgröße dieser Arbeit. Die #acr-emph("E2E")-Synchronisationsgenauigkeit von $<=1mu s$ über bis zu sieben Hops @ieee8021as2025[B.3], allerdings ausdrücklich nur "during steady-state operation", was bedeutet, dass die Einschwingphase hier nicht beachtet wird @ieee8021as2025[B.3].
 
 Neben den Genauigkeitsgrenzen begrenzt der Standard auch die Zeit, die eine Nachricht innerhalb einer PTP Relay Instance verbringen darf. Die `residence time` einer Bridge darf $10"ms"$ nicht überschreiten @ieee8021as2025[B.2.2].
 Für die vorliegende Arbeit ist diese Anforderung besonders relevant, weil die untersuchte Implementierung die Weiterleitung rein in Software durchführt.
+
+=== Frequenzgenauigkeit des bridge-internen Zeitabgleichs <anforderung-interner-abgleich>
+IEEE 802.1AS modelliert je PTP-Instanz genau eine LocalClock, die allen Ports gemeinsam zur Verfügung steht. Der Standard kennt deshalb keinen Abgleich zwischen mehreren Uhren innerhalb eines Geräts. Die in dieser Arbeit eingesetzten Bridges verfügen je Port einen eigenen MAC (siehe @testaufbau). Daher muss der in @bridge-sync-impl beschriebene Servo die vom Standard vorausgesetzte Genauigkeit ebenso einhalten, da diese eine Vorbedingung dafür ist, dass Annex B auf diese Plattform überhaupt anwendbar ist.
+
+Der Servofehler geht dabei an derselben Stelle in die Zeitübertragung ein wie ein Fehler der normativen rateRatio-Messung. Die `residenceTime` ($t_"res"$) wird nach @sync-mechanism als Differenz zwischen $t_s "und" t_r$ gebildet, wobei $t_r$ auf der Clock des Slave-Ports und $t_s$ auf der des Master-Ports entsteht. Jede Frequenzabweichung zwischen beiden Uhren skaliert diese Differenz und wirkt über das `correctionField` unmittelbar auf die gesamte Kette.
+
+Für die zulässige Frequenzabweichung $epsilon$ des Servos gilt damit unmittelbar dieselbe Schranke wie für die normative rateRatio-Messung, also $epsilon < 0,1$ #acr("ppm") nach @ieee8021as2025[B.2.4]. Die Anforderung ist damit abgeleitet und nicht normativ, ihr Zahlenwert aber dem Standard entnommen.
 
 === Robustheit unter Netzwerklast <anforderung-netzwerklast>
 Annex B selbst nennt keinen eigenen Grenzwert für Netzwerklast. Relevant ist die Anforderung dennoch, weil die #acr-emph("E2E")-Synchronisationsgenauigkeit aus @normative-leistungsanforderungen laut Standard nur unter der bereits genannten Bedingung gilt, dass jede Instanz ihre Sync-Nachricht in jedem Intervall empfängt. Genau diese Bedingung gefährdet Best-Effort-Nutzverkehr auf demselben physischen Port. Werden #acr("gPTP")-Nachrichten durch konkurrierenden Verkehr verzögert oder verworfen, ist die Vorbedingung von B.3 verletzt, unabhängig davon, wie exakt Granularität und rateRatio-Genauigkeit eingehalten werden.
@@ -28,7 +35,7 @@ Entscheidend ist dabei, an welcher Stelle der Verkehr um Ressourcen konkurriert.
 Neben den normativen Leistungsanforderungen ergeben sich aus dem gewählten Testaufbau weitere Anforderungen an die eingesetzte Hardware. Zeitstempel für ein- und ausgehende #acr("gPTP")-Nachrichten müssen dabei mindestens auf #acr("MAC")-Ebene erzeugt werden (siehe @hardware-timestamping), und jede Time-Aware Bridge muss Nachrichten an einem Port empfangen und über einen weiteren weiterleiten können, verfügt also über mindestens zwei Ports. Da im Testaufbau sowohl gigabit- als auch fast-ethernet-fähige Geräte in gemischten Ketten miteinander verbunden werden, muss außerdem jedes eingesetzte Gerät mindestens 100BASE-TX unterstützen, damit sich über alle Hops hinweg eine durchgängige Verbindung herstellen lässt.
 
 === Zusammenfassung der Anforderungen
-@tab-anforderungen fasst die in diesem Abschnitt abgeleiteten Anforderungen zusammen. Die vergebenen Bezeichner A1 bis A7 dienen als durchgängige Referenz. Die Messmethodik in @messmethodik ordnet jeder Anforderung ein Nachweisverfahren zu, die Tests in @tests erbringen den jeweiligen Nachweis, und die Erfüllungsmatrix in @erfuellungsmatrix führt letztendlich beides zusammen.
+@tab-anforderungen fasst die in diesem Abschnitt abgeleiteten Anforderungen zusammen. Die vergebenen Bezeichner A1 bis A8 dienen als durchgängige Referenz. Die Messmethodik in @messmethodik ordnet jeder Anforderung ein Nachweisverfahren zu, die Tests in @tests erbringen den jeweiligen Nachweis, und die Erfüllungsmatrix in @erfuellungsmatrix führt letztendlich beides zusammen.
 
 #figure(
   table(
@@ -50,7 +57,7 @@ Neben den normativen Leistungsanforderungen ergeben sich aus dem gewählten Test
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[A3 #label("a3")],
-    tab-d[Messgenauigkeit der rateRatio $<=0,1$ #acr("ppm")],
+    tab-d[Messgenauigkeit der `neighborRateRatio` $<=0,1$ #acr("ppm") je Port],
     tab-d[normativ @ieee8021as2025[B.2.4]],
     table.hline(stroke: 0.2pt + luma(80)),
 
@@ -72,6 +79,11 @@ Neben den normativen Leistungsanforderungen ergeben sich aus dem gewählten Test
     tab-d[A7 #label("a7")],
     tab-d[#acr("MAC")-Timestamping, $>=2$ Ports je Bridge, mindestens 100BASE-TX],
     tab-d[Testaufbau],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[A8 #label("a8")],
+    tab-d[Frequenzabweichung des bridge-internen Zeitabgleichs $<=0,1$ #acr("ppm")],
+    tab-d[abgeleitet (@anforderung-interner-abgleich)],
     table.hline(),
   ),
   caption: [Übersicht der abgeleiteten Anforderungen],
@@ -113,20 +125,30 @@ Bei einer einzelnen Bridge genügt ein Lauf für beide Größen: Belegt man die 
 
 Sobald mehr als eine Bridge im System ist, reichen vier Kanäle nicht mehr aus, um die gesamte Kette gleichzeitig zu erfassen. Da die #acr-emph("E2E")-Synchronisationsgenauigkeit laut Standard aber kumulativ über die Kette gilt und der Testaufbau mit maximal vier Hops innerhalb der zulässigen sieben bleibt, wird die Kette in mehreren Läufen mit wechselnder Kanalbelegung durchgemessen. Die Kanäle für #acr("GM") und Endpoint bleiben dabei über alle Läufe fest belegt, sodass sich die Läufe über diese gemeinsame Referenz zusammenführen lassen. Im Vordergrund steht hier entsprechend der #acr("GM")-relative Offset.
 
-=== Nachweis der bridge-internen rateRatio-Genauigkeit <nachweis-rateratio>
-Die #acr("PPS")-Messung weist die #acr-emph("E2E")-Synchronisationsgenauigkeit nach, eignet sich aber nicht für den Nachweis der rateRatio-Genauigkeit aus @ieee8021as2025[B.2.4] - unter anderem gefordert für den internen Abgleich zwischen Master- und Slave-Instanz der Bridge (siehe @bridge-sync-impl). Da rateRatio eine Frequenzgröße ist, wird dieser Nachweis stattdessen über die #gls("allan")[Allan-Abweichung] der geloggten rateRatio-Werte erbracht @allan1966statistics @riley2008frequencystability[13]. In dieser Arbeit wird dazu wie folgt vorgegangen:
+=== Nachweis der rateRatio-Genauigkeit <nachweis-rateratio>
+Die #acr("PPS")-Messung weist die #acr-emph("E2E")-Synchronisationsgenauigkeit nach, eignet sich aber nicht für den Nachweis der beiden Frequenzanforderungen #req("A3") und #req("A8"). Beide sind Frequenzgrößen und werden deshalb über die #gls("allan")[Allan-Abweichung] der jeweils geloggten Messreihe erbracht @allan1966statistics @riley2008frequencystability[5.2.2].
 
-1. Einschwingzeit abwarten, damit sich der #acr("PI")-Regler auf einen stabilen Zustand einschwingen kann.
+Nachzuweisen sind dabei zwei getrennte Größen, die im selben Lauf erfasst werden. Für #req("A3") ist es die vom #acr("gPTP")-Stack je Port aus dem pDelay-Mechanismus geschätzte `neighborRateRatio`, für #req("A8") die vom bridge-internen Servo aufgeprägte Ratenkorrektur. Beide sind fraktionale Frequenzabweichungen und damit gegen denselben Grenzwert prüfbar, unterscheiden sich inhaltlich aber grundlegend: Die erste ist eine Messung, die zweite eine Stellgröße.
 
-2. rateRatio zwischen Master und Slave über einen definierten Zeitraum messen und loggen.
+In dieser Arbeit wird dazu wie folgt vorgegangen:
 
-3. Aus den Messungen wird die Abweichung von der geforderten Genauigkeit geprüft, indem die Allan-Abweichung $sigma_y (tau)$ der rateRatio-Messreihe berechnet wird. Da rateRatio bereits eine über das Messintervall $tau$ gemittelte Frequenzschätzung ist, wird dazu die Varianz der Differenzen aufeinanderfolgender Werte gebildet, statt die Streuung um den Gesamtmittelwert zu betrachten wie bei der klassischen Standardabweichung: Für die bei Quarzoszillatoren typischen Rauschprozesse (z. B. Flicker- oder Random-Walk-Frequenzrauschen) konvergiert die klassische Varianz nicht zuverlässig und wird durch langsamen Drift verfälscht, während die Allan-Varianz dagegen robust ist @allan1966statistics – dasselbe Konzept (ADEV), das @ieee8021as2025[B.1.3.2] für die Rauschcharakterisierung der LocalClock referenziert @riley2008frequencystability[14]:
+1. Einschwingzeit abwarten, damit sich die jeweilige Regelung auf einen stabilen Zustand einschwingen kann.
+
+2. Beide Größen über einen definierten Zeitraum messen und loggen.
+
+3. Aus den Messungen wird die Abweichung von der geforderten Genauigkeit geprüft, indem die Allan-Abweichung $sigma_y (tau)$ der rateRatio-Messreihe berechnet wird. Da rateRatio bereits eine über das Messintervall $tau$ gemittelte Frequenzschätzung ist, wird dazu die Varianz der Differenzen aufeinanderfolgender Werte gebildet, statt die Streuung um den Gesamtmittelwert zu betrachten wie bei der klassischen Standardabweichung. Für die bei Quarzoszillatoren typischen Rauschprozesse (z. B. Flicker- oder Random-Walk-Frequenzrauschen) konvergiert die klassische Varianz nicht zuverlässig und wird durch langsamen Drift verfälscht, während die Allan-Varianz dagegen robust ist @allan1966statistics, dasselbe Konzept (ADEV), das @ieee8021as2025[B.1.3.2] für die Rauschcharakterisierung der LocalClock referenziert @riley2008frequencystability[5.2.2]:
 
 $
   sigma_y (tau) = sqrt(1/(2(M-1)) sum_(i=1)^(M-1) (y_(i+1) - y_i)^2)
 $
 
-Dabei ist $y_i = "rateRatio"_i - 1$ die fraktionale Frequenzabweichung des $i$-ten Messintervalls und $M$ die Anzahl der gemessenen Intervalle. Das Mittelungsintervall $tau$ ergibt sich aus der Messmethodik selbst. Durch die #acr("PPS")-Flanken folgt die sekündliche aktualisierung der rateRatio des bridge-internen Servos. In dieser Arbeit wird deshalb durchgehend mit $tau = 1"s"$ gerechnet. Liegt die berechnete Allan-Abweichung $sigma_y (tau = 1"s")$ innerhalb der geforderten 0,1 #acr("ppm"), gilt die Anforderung als erfüllt.
+Dabei ist $y_i$ die fraktionale Frequenzabweichung des $i$-ten Messintervalls und $M$ die Anzahl der gemessenen Intervalle. Für #req("A3") ist $y_i = "neighborRateRatio"_i - 1$, für #req("A8") die vom Servo gestellte Ratenkorrektur.
+
+Das Mittelungsintervall $tau_0$ wird nicht angenommen, sondern aus den Zeitstempeln des Logs selbst bestimmt, da es sich aus der Aktualisierungsrate der jeweiligen Größe ergibt und nicht frei wählbar ist. Für den Servo folgt es aus den #acr("PPS")-Flanken, für die `neighborRateRatio` aus dem pDelay-Intervall. Beide liegen bei $tau_0 approx 1"s"$.
+
+Die Einschwingzeit wird je Messreihe einzeln bestimmt und nicht pauschal vorgegeben. Das ist notwendig, weil die Reihen unterschiedlich schnell einschwingen. Ein gemeinsamer Startwert wäre für eine Auwertung zu spät und für die anderen zufrüh. Dies hätte zufolge, dass die Einschwingwerte mit in die Auswertung aufgenommen werden, was $sigma_y$ um Größenordnungen verfälscht. Als eingeschwungen gilt eine Reihe ab dem Sample nach der letzten Überschreitung eines Toleranzbands, das aus der Streuung des eingeschwungenen Zustands am Ende des Laufs geschätzt wird.
+
+Liegt die berechnete Allan-Abweichung $sigma_y (tau_0)$ innerhalb der geforderten 0,1 #acr("ppm"), gilt die jeweilige Anforderung als erfüllt.
 
 === Nachweis der Pufferversorgung unter Last <nachweis-pufferversorgung>
 Die #acr("PPS")-Messung zeigt, ob die Synchronisation unter Last erhalten bleibt, nicht aber, woran es liegt, wenn sie es nicht tut. Für den zweiten Teil von #req("A6"), dass #acr("gPTP")-Nachrichten auch unter Last durchgängig einen Empfangspuffer erhalten, wird deshalb ergänzend ein treiberinterner Zähler ausgewertet, der fehlgeschlagene Pufferallokationen auf dem #acr("gPTP")-Empfangspfad zählt (`alloc_fail_ptp`). Dieser wird während des Lasttests sekündlich mitgeloggt.

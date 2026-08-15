@@ -31,8 +31,8 @@
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[#req("A3")],
-    tab-d[rateRatio-Genauigkeit $<=0,1$#acr("ppm")],
-    tab-d[$sigma_y (tau=1"s") = 23,3$#acr("ppb") (@nachweis-rateratio, @basisvalidierung)],
+    tab-d[Messgenauigkeit der `neighborRateRatio` $<=0,1$#acr("ppm") je Port],
+    tab-d[$sigma_y (tau_0) = 46,2$#acr("ppb") am Master- und $82,1$#acr("ppb") am Slave-Port (@tab-basisvalidierung-rateratio)],
     tab-d[Erfüllt],
     table.hline(stroke: 0.2pt + luma(80)),
 
@@ -57,6 +57,12 @@
     tab-d[#req("A7")],
     tab-d[Hardwareanforderungen (#acr("MAC")-Timestamping, $>=2$ Ports, $>=$100BASE-TX)],
     tab-d[Durch Auswahl der Testhardware sichergestellt (@testaufbau)],
+    tab-d[Erfüllt],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[#req("A8")],
+    tab-d[Frequenzabweichung des bridge-internen Zeitabgleichs $<=0,1$#acr("ppm")],
+    tab-d[$sigma_y (tau_0) = 28,5$#acr("ppb") (@tab-basisvalidierung-rateratio); Beitrag zum Fehlerbudget $0,15"ns"$ (@basisvalidierung)],
     tab-d[Erfüllt],
     table.hline(),
   ),

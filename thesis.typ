@@ -91,9 +91,9 @@
   "scheduling": ("Scheduling", [Zuteilung der Rechenzeit durch das Betriebssystem]),
   "frame": ("Frame", [Übertragungseinheit auf Ethernet-Ebene]),
   "statsRxFifoOverflowErr": ("statsRxFifoOverflowErr", [MAC interner FIFO overflow]),
-  "statsRxDropInvalidSFD": ("statsRxDropInvalidSFD", [Frame wegen ungültigem SFD) verworfen]),
-  "statsRxCrcErr": ("statsRxDropInvalidSFD", [fehlerhafte Prüfsumme]),
-  "statsRxAlignErr": ("statsRxDropInvalidSFD", [fehlerhafte Byte-Ausrichtung]),
+  "statsRxDropInvalidSFD": ("statsRxDropInvalidSFD", [Frame wegen ungültigem SFD verworfen]),
+  "statsRxCrcErr": ("statsRxCrcErr", [fehlerhafte Prüfsumme]),
+  "statsRxAlignErr": ("statsRxAlignErr", [fehlerhafte Byte-Ausrichtung]),
 ))
 
 #set text(font: "Cambria")

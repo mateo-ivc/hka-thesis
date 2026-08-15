@@ -5,10 +5,11 @@
 == Basisvalidierung <basisvalidierung>
 Um eine umfangreiche Validierung der Bridge durchführen zu können, müssen zunächst die Grundlagen validiert werden, auf denen die nachfolgenden Tests aufbauen.
 
-Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen sowohl die #acr-emph("E2E")-Synchronisationsgenauigkeit (@normative-leistungsanforderungen) als auch die rateRatio-Genauigkeit der bridge-internen Synchronisierung (@nachweis-rateratio) einhält. Darüber hinaus wird derselbe Lauf genutzt, um die `residence time` der Bridge zu vermessen und daraus zu beziffern, welchen Anteil am zulässigen Gesamtfehler die bridge-interne Synchronisierung tatsächlich beansprucht.
+Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen die #acr-emph("E2E")-Synchronisationsgenauigkeit #req("A4") sowie beide Frequenzanforderungen einhält. Die normative Messgenauigkeit der `rateRatio` je Port #req("A3") und die Frequenzgenauigkeit des bridge-internen Zeitabgleichs #req("A8"). Darüber hinaus wird die `residenceTime` der Bridge vermessen, um zu beziffern, welchen Anteil am zulässigen Gesamtfehler die bridge-interne Synchronisierung tatsächlich beansprucht.
 
 === Testaufbau
-Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos (`ptp_bridge_servo`, siehe @bridge-sync-impl).
+Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos, welche den Offset als auch die Frequenzabweichung zwischen den interne Clocks aufnimmt (siehe @bridge-sync-impl).
+Zusätzlich wird in der Aufzeichnung die `neighborRateRatio` aufgenommen, welche als nachweis für die Frequenzabweichung zwischen den einezelnen PTP-Instanzen dienen soll.
 
 === Ergebnisse
 
@@ -21,36 +22,65 @@ Alle drei Messpunkte erreichen ihren eingeschwungenen Zustand $t_"set"$ recht fr
 
 Die Boxplots in @fig-basisvalidierung-boxplot beziehen sich auf das jeweils gültige Fenster ab $t_"set"$. Median und Interquartilsabstand (die mittleren 50 % der Proben) liegen am Slave-Port bei $141"ns"$ bzw. $47"ns"$, am Master-Port bei $177"ns"$ bzw. $55"ns"$ und am Endpoint bei $-114"ns"$ bzw. $65"ns"$. An allen drei Messpunkten liegen sowohl der Median als auch die gesamte Box damit deutlich innerhalb des $1mu s$-Toleranzbands.
 
-Neben der PPS-basierten Synchronisationsgenauigkeit wird im selben Lauf auch die rateRatio-Genauigkeit der bridge-internen Synchronisierung überprüft.
+Neben der PPS-basierten Synchronisationsgenauigkeit werden die beiden Frequenzanforderungen #req("A3") und #req("A8") überprüft. @fig-basisvalidierung-rate-ratio zeigt beide Größen über der Zeit.
 
 #figure(
   image("../assets/Tests/rate_ratio_allan_basisvalidierung.png", width: 100%),
-  caption: [ppb-Verlauf des internen Servos, Basisvalidierung Einzelbridge],
+  caption: [`neighborRateRatio` je Port und Ratenkorrektur des internen Servos],
 ) <fig-basisvalidierung-rate-ratio>
 
-Im aufgezeichneten Lauf tritt genau ein `HARD_STEP` der Slave-Clock der Bridge auf ($t approx 5"s"$, siehe @fig-basisvalidierung-rate-ratio). Danach schwingt der #acr("PI")-Regler bis $t approx 125"s"$ auf einen stabilen Wert um $84000$#acr("ppb") ein. Ab diesem Zeitpunkt verbleiben $908$ Proben für die Allan-Abweichung nach @nachweis-rateratio. Aus den gesammelten Daten lässt sich für $tau = 1"s"$ (siehe @nachweis-rateratio) $sigma_y (tau) = 23,3$ #acr("ppb") bestimmen. Dieser Wert liegt deutlich innerhalb der geforderten $0,1$ #acr("ppm") ($100$#acr("ppb")), womit die Anforderung als erfüllt gilt.
+Das Mittelungsintervall ergibt sich nach @nachweis-rateratio aus den Logzeitstempeln zu $tau_0 = 1,002"s"$ und entspricht damit dem pDelay-Intervall. @tab-basisvalidierung-rateratio fasst die Kennzahlen der drei Messreihen zusammen.
 
-Als unabhängige Plausibilisierung wird der geloggte `phase_error` (Slave $minus$ Master-Zeitstempel) gegen den zeitgleich per #acr("PPS") gemessenen Hop-Offset zwischen Master- und Slave-Port desselben Laufs verglichen. Über $762$ überlappende Segmente weichen beide Größen im Mittel um nur $32,7"ns"$ voneinander ab, bei einer Streuung von $62,6"ns"$. Beide Messverfahren stützen sich damit gegenseitig.
+#figure(
+  table(
+    columns: (1.7fr, 0.8fr, 0.6fr, 0.9fr, 0.9fr, 1fr, 0.8fr),
+    align: (left, right, right, right, right, right, left),
+    stroke: none,
+    table.hline(),
+    tab-h[Messreihe], tab-h[$t_"set"$], tab-h[$n$], tab-h[Median], tab-h[IQR], tab-h[$sigma_y (tau_0)$], tab-h[Status],
+    table.hline(stroke: 0.5pt),
 
-Über die reine Einhaltung der Grenzwerte hinaus erlaubt derselbe Lauf, den Beitrag der bridge-internen Synchronisierung zum Gesamtfehler zu beziffern. Maßgeblich dafür ist die `residence time`: Sie wird nach @sync-mechanism als Differenz $t_s - t_r$ gebildet, und ihre beiden Zeitstempel entstehen auf verschiedenen Clocks. $t_r$ auf der Clock des Slave-Ports und $t_s$ auf der des Master-Ports. Jede Abweichung zwischen diesen beiden Clocks geht damit unmittelbar in das `correctionField` und über die gesamte Kette weiter.
+    tab-d[`neighborRateRatio` Master-Port],
+    tab-d[$18,6"s"$], tab-d[$1025$], tab-d[$-1,0$], tab-d[$59,0$], tab-d[$46,2$], tab-d[#req("A3") erfüllt],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[`neighborRateRatio` Slave-Port],
+    tab-d[$150,9"s"$], tab-d[$893$], tab-d[$-1,0$], tab-d[$104,5$], tab-d[$82,1$], tab-d[#req("A3") erfüllt],
+    table.hline(stroke: 0.2pt + luma(80)),
+
+    tab-d[Bridge-interner Servo],
+    tab-d[$41,1"s"$], tab-d[$1005$], tab-d[$84.101$], tab-d[$72,4$], tab-d[$28,5$], tab-d[#req("A8") erfüllt],
+    table.hline(),
+  ),
+  caption: [Frequenzgenauigkeit der Einzelbridge, alle Werte in #acr("ppb")],
+) <tab-basisvalidierung-rateratio>
+
+Alle drei Messreihen unterschreiten den geforderten Grenzwert von $0,1$ #acr("ppm") ($100$#acr("ppb")) deutlich. Bemerkenswert ist dabei, dass der bridge-interne Servo mit $28,5$#acr("ppb") stabiler arbeitet als beide brechnungen des #acr("gPTP")-Stacks.
+
+Die Einschwingzeiten unterscheiden sich erheblich, was die in @nachweis-rateratio begründete Einzelbestimmung rechtfertigt. Der Slave-Port benötigt mit $150,9"s"$ gut das Achtfache des Master-Ports. Seine Syntonisierung verharrt über rund zwei Minuten auf einem stabilen Plateau bei $approx 3800$#acr("ppb"), bevor sie endgültig einrastet (siehe @fig-basisvalidierung-rate-ratio).
+
 
 #figure(
   image("../assets/Tests/bridge1_residenceTime.png", width: 100%),
-  caption: [Residence time und Phasenfehler der Bridge, Basisvalidierung Einzelbridge],
+  caption: [residenceTime und Phasenfehler der Bridge, Basisvalidierung Einzelbridge],
 ) <fig-basisvalidierung-residence>
 
-Die Bridge benötigt im Durchschnitt $5,19"ms"$, um eine Sync-Nachricht weiterzuleiten. Bei einem Sync-Intervall von $125"ms"$ entspricht dies rund $4%$ des Intervalls. Damit ist zugleich die in @normative-leistungsanforderungen abgeleitete normative Obergrenze von $10"ms"$ je PTP Relay Instance eingehalten. allerdings mit nur rund der Hälfte des Budgets als Reserve. Für eine reine Software-Weiterleitung ist das ein erwartbarer, für die Beurteilung der Praxistauglichkeit aber wesentlicher Befund, der in @limitationen wieder aufgegriffen wird.
+Die Bridge benötigt im Durchschnitt $5,19"ms"$, um eine Sync-Nachricht weiterzuleiten. Bei einem Sync-Intervall von $125"ms"$ entspricht dies rund $4%$ des Intervalls. Damit ist zugleich die in @normative-leistungsanforderungen abgeleitete normative Obergrenze von $10"ms"$ je PTP Relay Instance eingehalten. Allerdings mit nur rund der Hälfte des Budgets als Reserve. Für eine reine Software-Weiterleitung ist das ein erwartbarer, für die Beurteilung der Praxistauglichkeit aber wesentlicher Befund, der in @limitationen wieder aufgegriffen wird.
 
-Für die Synchronisationsgenauigkeit selbst ist diese vergleichsweise lange Verweilzeit zunächst unkritisch, da jede Sync-Nachricht ihren eigenen, individuell gemessenen Wert im `correctionField` mitführt und der Empfänger ihn vollständig herausrechnet. Entscheidend ist deshalb nicht die Höhe der `residence time`, sondern die Genauigkeit ihrer Messung, und genau diese wird durch die beiden Fehlerarten des internen Servos begrenzt.
+Für die Synchronisationsgenauigkeit selbst ist diese vergleichsweise lange Verweilzeit zunächst unkritisch, da jede Sync-Nachricht ihren eigenen, individuell gemessenen Wert im `correctionField` mitführt und der Empfänger ihn vollständig herausrechnet. Entscheidend ist deshalb nicht die Höhe der `residenceTime`, sondern die Genauigkeit ihrer Messung und genau diese wird durch die beiden Fehlerarten des internen Servos begrenzt.
 
-Ein Phasenfehler zwischen den beiden Clocks geht additiv in die `residence time` ($t_("res")$) ein, ein Frequenzfehler $epsilon$ dagegen skaliert mit ihr. Aus der gemessenen Verweilzeit lässt sich damit eine Schranke für den zulässigen Frequenzfehler herleiten. Damit der Frequenzanteil höchstens $1%$ des $1mu s$-Budgets aus @normative-leistungsanforderungen beansprucht, muss der  Frequenzfehler $epsilon < 1$ #acr("ppm") gelten. Die in einem eigenen Lauf bestimmte Allan-Abweichung von $28,3$ #acr("ppb") unterschreitet diese Schranke und trägt lediglich $t_("res") dot epsilon approx 0,15"ns"$ bei. Der Phasenfehler dominiert damit deutlich. Er liegt im Auswertungsfenster im Median bei $1"ns"$ und erreicht einen maximal Offset von $113"ns"$ bei einer Streuung von $35"ns"$. Beide Beiträge zusammen belegen im ungünstigsten Fall $113,1"ns"$ und damit $11,3%$ des zulässigen #acr-emph("E2E")-Budgets. Die bridge-interne Synchronisierung trägt damit nur einen geringen Anteil zu der in @fig-basisvalidierung-boxplot gezeigten Genauigkeit bei.
+Ein Phasenfehler zwischen den beiden Clocks geht additiv in die `residenceTime` ($t_("res")$) ein, ein Frequenzfehler $epsilon$ dagegen skaliert mit ihr. Aus der gemessenen Verweilzeit lässt sich damit eine Schranke für den zulässigen Frequenzfehler herleiten. Damit der Frequenzanteil höchstens $1%$ des $1mu s$-Budgets aus @normative-leistungsanforderungen beansprucht, muss der Frequenzfehler $epsilon < 1$ #acr("ppm") gelten. Die in @tab-basisvalidierung-rateratio bestimmte Allan-Abweichung von $28,5$ #acr("ppb") unterschreitet diese Schranke um mehr als eine Größenordnung und trägt lediglich $t_("res") dot epsilon approx 0,15"ns"$ bei. Der Phasenfehler dominiert damit deutlich. Er liegt im Auswertungsfenster im Median bei $1"ns"$ und erreicht einen maximalen Offset von $113"ns"$ bei einer Streuung von $35"ns"$. Beide Beiträge zusammen belegen im ungünstigsten Fall $113,1"ns"$ und damit $11,3%$ des zulässigen #acr-emph("E2E")-Budgets. Die bridge-interne Synchronisierung trägt damit nur einen geringen Anteil zu der in @fig-basisvalidierung-boxplot gezeigten Genauigkeit bei.
 
 === Einordnung und Ausblick
-Beide Anforderungen sind für die Einzelbridge erfüllt: die #acr-emph("E2E")-Synchronisationsgenauigkeit an allen drei Messpunkten und die rateRatio-Genauigkeit der bridge-internen Synchronisation. Die Fehlerbetrachtung ergänzt dieses Ergebnis um eine quantitative Einordnung, denn der gesamte Beitrag der bridge-internen Synchronisierung bleibt mit rund $11%$ des zulässigen Budgets deutlich unterhalb der Grenze und wird dabei vom Phasen-, nicht vom Frequenzfehler bestimmt. Damit ist die Grundlage gelegt, auf der die nachfolgenden Tests aufbauen.
+Alle drei geprüften Anforderungen sind für die Einzelbridge erfüllt: die #acr-emph("E2E")-Synchronisationsgenauigkeit #req("A4") an allen drei Messpunkten, die normative Messgenauigkeit der `neighborRateRatio` #req("A3") an beiden Ports und die Frequenzgenauigkeit des bridge-internen Zeitabgleichs #req("A8").
+
+Die Fehlerbetrachtung ergänzt dieses Ergebnis um eine quantitative Einordnung, denn der gesamte Beitrag der bridge-internen Synchronisierung bleibt mit rund $11%$ des zulässigen Budgets deutlich unterhalb der Grenze und wird dabei vom Phasen-, nicht vom Frequenzfehler bestimmt. Der Frequenzanteil fällt mit $0,14"ns"$ gegenüber dem Phasenfehler von bis zu $113"ns"$ nicht ins Gewicht.
+
+Zwei Befunde sind über den reinen Nachweis hinaus festzuhalten. Erstens verharrt die Syntonisierung des Slave-Ports über rund zwei Minuten auf einem konstanten Frequenzversatz von $3,8$#acr("ppm"), bevor sie endgültig einrastet. Hier bleibt das folgenlos, da die Auswertung erst danach beginnt und die #acr-emph("E2E")-Genauigkeit bereits deutlich früher im Toleranzband liegt. Zweitens verbessert sich die Stabilität des internen Servos mit längerer Mittelung kaum noch, was auf einen nicht weiter ausmittelbaren Rauschanteil hindeutet. Damit ist die Grundlage gelegt, auf der die nachfolgenden Tests aufbauen.
 
 
 == Validierung über mehrere Hops <mehrhop-validierung>
-Die Basisvalidierung hat gezeigt, dass eine einzelne Bridge die geforderten Genauigkeiten einhält. Die geforderte #acr-emph("E2E")-Synchronisationsgenauigkeit von $<=1mu s$ bezieht sich allerdings auf eine Kette von bis zu sieben Hops. Jede zusätzliche Bridge kann dabei eigene Fehlerbeiträge mit sich bringen. Insbesondere die Ungenauigkeit ihrer `residence time`-Messung, die Restabweichung der bridge-internen Synchronisierung (@bridge-sync-impl) sowie die in @Ungenauigkeiten beschriebene #acr-emph("PHY")-Asymmetrie. Ob sich diese Beiträge über mehrere Hops hinweg unkritisch verhalten oder sich systematisch aufsummieren, lässt sich an einer Einzelbridge nicht beantworten.
+Die Basisvalidierung hat gezeigt, dass eine einzelne Bridge die geforderten Genauigkeiten einhält. Die geforderte #acr-emph("E2E")-Synchronisationsgenauigkeit von $<=1mu s$ bezieht sich allerdings auf eine Kette von bis zu sieben Hops. Jede zusätzliche Bridge kann dabei eigene Fehlerbeiträge mit sich bringen. Insbesondere die Ungenauigkeit ihrer `residenceTime`-Messung, die Restabweichung der bridge-internen Synchronisierung (@bridge-sync-impl) sowie die in @Ungenauigkeiten beschriebene #acr-emph("PHY")-Asymmetrie. Ob sich diese Beiträge über mehrere Hops hinweg unkritisch verhalten oder sich systematisch aufsummieren, lässt sich an einer Einzelbridge nicht beantworten.
 
 Ziel dieses Tests ist es daher nachzuweisen, dass die #acr("E2E")-Synchronisationsgenauigkeit auch bei der maximal aufbaubaren Kettenlänge eingehalten wird, und darüber hinaus sichtbar zu machen, wie sich der Offset mit jedem zusätzlichen Hop entwickelt.
 
@@ -115,7 +145,7 @@ Im eingeschwungenen Fenster liegen Median und Interquartilsabstand am Slave-Port
 
 Über alle drei Ausbaustufen hinweg bleibt die #acr-emph("E2E")-Synchronisationsgenauigkeit zum Grandmaster am Endpoint durchgehend innerhalb des geforderten $1mu s$-Toleranzbands. $-114"ns"$ bei zwei Hops, $-288"ns"$ bei drei Hops und $-428"ns"$ bei vier Hops. Der Zuwachs pro zusätzlicher Bridge beträgt damit rund $174"ns"$ (Stufe 1 $->$ 2) und rund $140"ns"$ (Stufe 2 $->$ 3), bei gleichzeitig moderat wachsender Streuung (Endpoint-IQR $65"ns"$, $70"ns"$, $82"ns"$).
 
-Ein überlineares Anwachsen des Fehlers ist damit nicht erkennbar. Die beiden Zuwächse unterscheiden sich um $34"ns"$ und damit um weniger als den Interquartilsabstand am selben Messpunkt. Allerdings
+Ein überlineares Anwachsen des Fehlers ist damit nicht erkennbar. Die beiden Zuwächse unterscheiden sich um $34"ns"$ und damit um weniger als den Interquartilsabstand am selben Messpunkt.
 
 Für die drei tatsächlich aufgebauten Stufen ist die Bridge-Funktionalität im Sinne von Annex B.3 damit nachgewiesen. Eine Aussage über eine vollständige Kette von sieben Hops lässt sich daraus jedoch nicht ableiten. Sieben Hops entsprechen sechs zwischengeschaltete Bridges, also drei mehr als hier aufgebaut. Wenn man den beobachteten Zuwachs von rund $150 n s$ pro Bridge linear hochrechnet, ergibt sich ein Offset von etwa $880 n s$. Das entspricht bereits rund $88 %$ des zulässigen Toleranzbands. Diese Hochrechnung ist bewusst als grobe Abschätzung und nicht als exakte Prognose zu verstehen. Sie geht von einem konstanten Zuwachs pro Bridge aus. Eine Annahme, die durch die bisher vorliegenden drei Stufen nicht sicher belegt ist.
 Dennoch reicht diese Abschätzung aus, um zwei wichtige Erkenntnisse festzuhalten:
