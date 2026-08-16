@@ -108,7 +108,9 @@
 
 // Official cover sheet (Deckblatt), supplied as a ready-made PDF
 #set page("a4", margin: 0pt)
-#image("Thesis-Bachelor-Deckblatt.pdf", width: 100%, height: 100%)
+// Das offizielle Deckblatt liegt als PDF 2.0 vor, Typst exportiert nach PDF 1.7.
+// Deshalb wird eine mit `qpdf --force-version=1.7` erzeugte Kopie eingebunden.
+#image("Thesis-Bachelor-Deckblatt-pdf17.pdf", width: 100%, height: 100%)
 #openright()
 
 // Cover page
