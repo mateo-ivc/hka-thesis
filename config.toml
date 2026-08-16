@@ -6,20 +6,20 @@ is-draft = false                 # true: DRAFT-Wasserzeichen + Anmerkungen sicht
 is-two-sided = false            # true: doppelseitiges Layout (gerade/ungerade)
 
 author = "Mateo Ivankovic"
-title = "Titel der Abschlussarbeit"
-thesis-type = "Thesis" # z. B. Master-Thesis, Projektarbeit
-keywords = []
+title = "Implementierung und Validierung der IEEE 802.1AS Bridging-Funktionalität im Zephyr RTOS"
+thesis-type = "Bachelor-Thesis" # z. B. Master-Thesis, Projektarbeit
+keywords = ["IEEE 802.1AS", "gPTP", "Time-Sensitive Networking", "Zephyr RTOS", "Time-Aware Bridge", "Zeitsynchronisation", "Embedded Systems"]
 
-reviewer-one = "Erstprüfer"
-reviewer-two = "Zweitprüfer"    # leer lassen ("") zum Entfernen
+reviewer-one = "Hoffmann, Dirk, Prof. Dr."
+reviewer-two = "Fuchß, Thomas, Prof. Dr."    # leer lassen ("") zum Entfernen
 
-advisor-one = "Erster Betreuer"
-advisor-two = "Zweiter Betreuer" # leer lassen ("") zum Entfernen
+advisor-one = "Hoffmann, Dirk, Prof. Dr."
+advisor-two = "Fuchß, Thomas, Prof. Dr." # leer lassen ("") zum Entfernen
 
 department = "Informatik"
 institute = "Fakultät für Informatik und Wirtschaftsinformatik"
 university = "Hochschule Karlsruhe"
-company = "Firma"
+company = "inovex GmbH"
 
-statutory-declaration-place-and-date = "Datum ausstehend"
-completion-period = "TT. Monat JJJJ – TT. Monat JJJJ"
+statutory-declaration-place-and-date = "Karlsruhe, 19. August 2026"
+completion-period = "06. April 2026 – 19. August 2026"

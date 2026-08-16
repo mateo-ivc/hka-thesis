@@ -20,6 +20,8 @@ Aktuell existiert im Quellcode von Zephyr eine Implementierung des IEEE 802.1AS-
 
 Dadurch ist es unklar, ob diese Implementierung auf den verschiedenen Systemen die strikten Genauigkeitsanforderungen des Standards erfüllt.
 
-== Zielsetzung
+== Zielsetzung <zielsetzung>
 
 Das Hauptziel der Arbeit besteht darin, die bisher unvalidierte Bridge-Funktionalität des IEEE 802.1AS-Protokolls in Zephyr zu validieren. Um eine präzise Aussage über die Synchronisationsfähigkeit im Bridge-Betrieb treffen zu können, wird im Rahmen dieser Arbeit ein dediziertes Hardware-Test-Setup aufgebaut. Die experimentelle Validierung erfolgt über die messtechnische Erfassung und Analyse von #acr-emph("PPS")-Signalen mittels eines Oszilloskops. Die daraus gewonnenen Daten dienen als Grundlage, um die Eignung des aktuellen Zephyr-Protokollstapels zu bewerten.
+
+Gegenstand der Validierung ist dabei die Zeitsynchronisationsfunktion einer Time-Aware Bridge, im Standard als PTP Relay Instance bezeichnet: das Empfangen, Korrigieren und Weitersenden der #acr("gPTP")-Nachrichten unter Kompensation der eigenen Verarbeitungszeit. Die Vermittlung des übrigen Ethernet-Verkehrs zwischen den Ports ist nicht Teil der Untersuchung.

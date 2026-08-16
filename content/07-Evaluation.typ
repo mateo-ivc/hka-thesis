@@ -43,7 +43,7 @@
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[#req("A5")],
-    tab-d[`residence time` $<=10"ms"$ je Bridge],
+    tab-d[`residenceTime` $<=10"ms"$ je Bridge],
     tab-d[Maßgeblich ist der Maximalwert: $8,68"ms"$ (Mittel $5,19"ms"$) im eingeschwungenen Zustand (@basisvalidierung)],
     tab-d[Erfüllt, $86,8%$ des Budgets; nur unbelastet nachgewiesen],
     table.hline(stroke: 0.2pt + luma(80)),
@@ -61,8 +61,8 @@
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[#req("A8")],
-    tab-d[Frequenzabweichung des bridge-internen Zeitabgleichs $<=0,1$#acr("ppm")],
-    tab-d[$sigma_y (tau_0) = 28,5$#acr("ppb") (@tab-basisvalidierung-rateratio)(@basisvalidierung)],
+    tab-d[Verbleibende Frequenzabweichung des bridge-internen Zeitabgleichs $<=0,1$#acr("ppm")],
+    tab-d[$sigma_y (tau_0) = 28,5$#acr("ppb") (@tab-basisvalidierung-rateratio)],
     tab-d[Erfüllt],
     table.hline(),
   ),
@@ -70,17 +70,17 @@
 ) <tab-erfuellungsmatrix>
 
 == Einordnung in verwandte Arbeiten <einordnung-verwandte-arbeiten>
-Die in @basisvalidierung und @mehrhop-validierung gemessenen Offsets liegen deutlich innerhalb der von Bailleul et al. an dedizierter #acr("TSN")-Hardware gemessenen Größenordnung @bailleul2022erts, bewegen sich aber näher an deren oberem Rand. Bailleul et al. erreichen mit vier #acr("TSN")-Switches über drei Hops durchgehend Offsets im niedrigen Nanosekundenbereich. Gegenüber Riep @riep2025 markiert diese Arbeit dagegen vor allem einen Rollenwechsel. Riep validiert den Zephyr-Stack auf derselben NXP-i.MX-RT-Plattformfamilie ausschließlich als Endpunkt, während er als Time-Aware Bridge laut eigener Projektdokumentation unvalidiert bleibt @zephyr_gptp.  Die vorliegenden Ergebnisse zeigen, dass sich diese Lücke schließen lässt, vorausgesetzt, die in @implementierung beschriebenen Korrekturen werden angewendet. Ohne sie wäre keine Synchronisierung über mehr als einen Hop zustande gekommen.
+Die in @basisvalidierung und @mehrhop-validierung gemessenen Offsets liegen deutlich innerhalb der von Bailleul et al. an dedizierter #acr("TSN")-Hardware gemessenen Größenordnung @bailleul2022erts, bewegen sich aber näher an deren oberem Rand. Bailleul et al. erreichen mit vier #acr("TSN")-Switches über drei Hops durchgehend Offsets im niedrigen Nanosekundenbereich. Gegenüber Riep @riep2025 markiert diese Arbeit dagegen vor allem einen Rollenwechsel. Riep validiert den Zephyr-Stack auf derselben NXP-i.MX-RT-Plattformfamilie ausschließlich als Endpunkt, während er als Time-Aware Bridge laut eigener Projektdokumentation unvalidiert bleibt @zephyr_gptp. Die vorliegenden Ergebnisse zeigen, dass sich diese Lücke schließen lässt, vorausgesetzt, die in @implementierung beschriebenen Korrekturen werden angewendet. Ohne sie wäre keine Synchronisierung über mehr als einen Hop zustande gekommen.
 
 Diese Bug-Dichte in einer einzelnen, homogenen Implementierung fügt sich in den von Brunner et al. beschriebenen Befund ein, dass die Einhaltung eines Standards auf dem Papier keine Funktion im Gesamtsystem garantiert @brunner2025crossvendor. Während Brunner et al. dies an einem herstellerübergreifenden Aufbau mit abweichenden Auslegungen desselben Standards zeigen, tritt derselbe Effekt hier bereits innerhalb einer einzigen Implementierung auf. Auch ein vollständig konformes Feature-Set schützt nicht davor, dass einzelne, in der Praxis nie erprobte Codepfade die Kernfunktion vollständig verhindern. Beide Beobachtungen stützen damit dieselbe, bereits in @stand-der-technik formulierte These dieser Arbeit. Standardkonformität auf dem Papier lässt sich nur durch tatsächliche messtechnische Validierung in eine belastbare Aussage über die Funktion übersetzen.
 
 == Methodische Grenzen <limitationen>
 Die vorstehenden Ergebnisse gelten innerhalb eines klar umrissenen Rahmens, dessen Grenzen dieser Abschnitt nach ihrem Gewicht für die Kernaussage der Arbeit geordnet benennt.
 
-*Kettenlänge.* Der Nachweis der #acr-emph("E2E")-Synchronisationsgenauigkeit (#req("A4")) stützt sich auf zwei, drei und vier Hops, während die vom Standard vorgesehene maximale Kettenlänge von sieben Hops entspricht. Da der beobachtete Offset mit jeder Bridge in dieselbe Richtung wächst, ist die Hochrechnung nicht zu ignorieren. Die lineare Fortschreibung in @mehrhop-validierung führt bei sieben Hops auf rund $88%$ des Toleranzbands. Die Arbeit weist die Anforderung damit für die realisierten Ausbaustufen nach, nicht für den vom Standard adressierten Maximalfall.
+*Kettenlänge.* Der Nachweis der #acr-emph("E2E")-Synchronisationsgenauigkeit (#req("A4")) stützt sich auf zwei, drei und vier Hops, während der Standard eine maximale Kettenlänge von sieben Hops vorsieht. Da der beobachtete Offset mit jeder Bridge in dieselbe Richtung wächst, ist die Hochrechnung nicht zu ignorieren. Die lineare Fortschreibung in @mehrhop-validierung führt bei sieben Hops auf rund $88%$ des Toleranzbands. Die Arbeit weist die Anforderung damit für die realisierten Ausbaustufen nach, nicht für den vom Standard adressierten Maximalfall.
 
 *Aussagekraft des Lastszenarios.* Da von den eingesetzten Ethernet-Instanzen nur `enet1g` die benötigten #acr("TSN")-Mechanismen bereitstellt (@testaufbau), ließ sich die Last ausschließlich in eine Richtung und nur an einem einzelnen Port erzeugen. Der Nachweis der Robustheit (#req("A6")) gilt damit für diesen einen Betriebspunkt, nicht für beidseitige Last über die gesamte Kette.
 
-*Betriebspunkt der `residenceTime`.* Der Nachweis von #req("A5") stützt sich ausschließlich auf den unbelasteten Einzelbridge-Lauf aus @basisvalidierung. Da die Weiterleitung rein in Software erfolgt, ist unter CPU- und Pufferlast eine Zunahme der Verweilzeit zu erwarten, während der gemessene Maximalwert bereits $86,8%$ des zulässigen Budgets ausschöpft. Ob die Obergrenze von $10"ms"$ auch unter der in @netzwerklast-test erzeugten Last eingehalten wird, ist noch zu beweisen.
+*Betriebspunkt der `residenceTime`.* Der Nachweis von #req("A5") stützt sich ausschließlich auf den unbelasteten Einzelbridge-Lauf aus @basisvalidierung. Da die Weiterleitung rein in Software erfolgt, ist unter CPU- und Pufferlast eine Zunahme der Verweilzeit zu erwarten, während der gemessene Maximalwert bereits $86,8%$ des zulässigen Budgets ausschöpft. Ob die Obergrenze von $10"ms"$ auch unter der in @netzwerklast-test erzeugten Last eingehalten wird, ist damit nicht nachgewiesen.
 
 *Nicht quantifizierte Fehlerquelle.* Die in @Ungenauigkeiten beschriebene #acr-emph("PHY")-Asymmetrie erklärt den beobachteten Offset am plausibelsten. Solange sie nicht durch eine eigene Messreihe der Ein- und Ausgangslatenzen beider #acrpl("PHY") beziffert ist, bleibt die Erklärung des Mehrhop-Verhaltens qualitativ.

@@ -23,17 +23,17 @@
 #line(length: 100%, stroke: (thickness: 0.5pt))
 #v(0.6em)
 
-// PLACEHOLDER: Describe AI usage for your own thesis here.
-Im Rahmen der Erstellung dieser Arbeit wurden generative KI-Werkzeuge in dem unten beschriebenen Umfang eingesetzt. Beschreiben Sie hier konkret, wofür und in welchem Umfang KI verwendet wurde sowie welche Inhalte ausschließlich eigenständig erarbeitet wurden.
+Im Rahmen der Erstellung dieser Arbeit wurden generative KI-Werkzeuge in dem unten beschriebenen Umfang eingesetzt. Die Konzeption der Arbeit, der Aufbau und die Durchführung der Messungen sowie die Auswertung und Interpretation der Ergebnisse wurden eigenständig erarbeitet. Die Anpassungen am Zephyr-Quellcode wurden überwiegend eigenständig entwickelt. Bei der Analyse und Eingrenzung einzelner Fehler wurden KI-Werkzeuge unterstützend hinzugezogen. Sämtliche mit Unterstützung generativer KI erstellten oder überarbeiteten Inhalte wurden vor der Übernahme inhaltlich geprüft und, wo erforderlich, angepasst. Die Verantwortung für den Inhalt der Arbeit liegt vollständig beim Verfasser.
 
 #v(0.8em)
 *Verwendete Hilfsmittel:*
 #v(0.3em)
 
 #pad(x: 1em)[
-  - Werkzeug 1 — Zweck der Nutzung \
-  - Werkzeug 2 — Zweck der Nutzung
-  - Werkzeug 3 — Zweck der Nutzung
+  - Claude (Anthropic) — eingesetzt für:
+    - die Unterstützung bei der Analyse und Eingrenzung von Fehlern im Zephyr-Netzwerkstack und im Ethernet-Treiber,
+    - die Unterstützung bei der Erstellung der Python-Skripte zur Auswertung der Mess- und Logdaten,
+    - die Formulierung und sprachliche Überarbeitung des Fließtextes.
 ]
 
 #v(1fr)
