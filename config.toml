@@ -3,7 +3,7 @@
 # leer lassen ("") — dann werden sie auf dem Cover ausgeblendet.
 
 is-draft = false                 # true: DRAFT-Wasserzeichen + Anmerkungen sichtbar
-is-two-sided = false            # true: doppelseitiges Layout (gerade/ungerade)
+is-two-sided = true            # true: doppelseitiges Layout (gerade/ungerade)
 
 author = "Mateo Ivankovic"
 title = "Implementierung und Validierung der IEEE 802.1AS Bridging-Funktionalität im Zephyr RTOS"

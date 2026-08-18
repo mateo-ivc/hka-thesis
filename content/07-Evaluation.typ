@@ -20,7 +20,7 @@
 
     tab-d[#req("A1")],
     tab-d[`asCapable`-Vorbedingung (meanLinkDelay $<=800n s$)],
-    tab-d[Indirekt: Ohne erfülltes `asCapable` fände in keinem Szenario überhaupt eine Synchronisierung statt. Kein eigener numerischer Nachweis.],
+    tab-d[Ohne erfülltes `asCapable` fände in keinem Szenario eine Synchronisierung statt.],
     tab-d[Indirekt erfüllt],
     table.hline(stroke: 0.2pt + luma(80)),
 
@@ -38,19 +38,19 @@
 
     tab-d[#req("A4")],
     tab-d[#acr-emph("E2E")-Synchronisationsgenauigkeit $<=1mu s$, bis zu 7 Hops],
-    tab-d[Für 2 bis 4 Hops in allen drei Kettenlängen sowie über rund 6,5 h eingehalten (@basisvalidierung, @mehrhop-validierung, @langzeitmessung)],
-    tab-d[Erfüllt für 2-4 Hops, keine Aussage für 5-7 Hops],
+    tab-d[Für 2 bis 4 Hops  (@basisvalidierung, @mehrhop-validierung, @langzeitmessung)],
+    tab-d[Erfüllt für 2-4 Hops],
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[#req("A5")],
     tab-d[`residenceTime` $<=10"ms"$ je Bridge],
-    tab-d[Maßgeblich ist der Maximalwert: $8,68"ms"$ (Mittel $5,19"ms"$) im eingeschwungenen Zustand (@basisvalidierung)],
-    tab-d[Erfüllt, $86,8%$ des Budgets; nur unbelastet nachgewiesen],
+    tab-d[Maximalwert von $8,68"ms"$ (Mittel $5,19"ms"$) (@basisvalidierung)],
+    tab-d[Erfüllt, $86,8%$ des Budgets],
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[#req("A6")],
-    tab-d[Robustheit unter Netzwerklast inkl. Pufferversorgung des gPTP-Pfads],
-    tab-d[Konfiguration A bricht bei $14"Mbit/s"$ zusammen, Konfiguration B bleibt bis $42"Mbit/s"$ stabil (@netzwerklast-test); `alloc_fail_ptp` durchgehend null (@ergebnisse-pufferversorgung)],
+    tab-d[Robustheit unter Netzwerklast ],
+    tab-d[Konfiguration A bricht bei $14"Mbit/s"$ zusammen, Konfiguration B bleibt bis $42"Mbit/s"$ stabil (@netzwerklast-test)],
     tab-d[Nur mit Konfiguration B erfüllt],
     table.hline(stroke: 0.2pt + luma(80)),
 

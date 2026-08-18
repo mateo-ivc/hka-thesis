@@ -23,7 +23,7 @@
   "MAC": ("Media-Access-Control",),
   "PHY": ("Physical-Layer", "Physical-Layer-Bausteine"),
   "SFD": ("Start Frame Delimiter",),
-  "RTOS": ("Real-Time Operating System", "Echtzeitbetriebssysteme"),
+  "RTOS": ("Real-Time Operating System", "Real-Time Operating Systems"),
   "BTCA": ("best timeTransmitter clock algorithm",),
   "GM": ("Grandmaster Clock",),
   "ISR": ("Interrupt-Service-Routine", "Interrupt-Service-Routinen"),
@@ -50,6 +50,7 @@
   "RX": ("Receive",),
   "TX": ("Transmit",),
   "SDRAM": ("Synchronous Dynamic Random-Access Memory",),
+  "PCP": "Priority Code Point",
 ))
 
 // Short forms only in the list of abbreviations (body text stays with short/short-pl)
@@ -110,7 +111,7 @@
 #set page("a4", margin: 0pt)
 // Das offizielle Deckblatt liegt als PDF 2.0 vor, Typst exportiert nach PDF 1.7.
 // Deshalb wird eine mit `qpdf --force-version=1.7` erzeugte Kopie eingebunden.
-#image("Thesis-Bachelor-Deckblatt-pdf17.pdf", width: 100%, height: 100%)
+#image("Thesis-Bachelor-Deckblatt.pdf", width: 100%, height: 100%)
 #openright()
 
 // Cover page

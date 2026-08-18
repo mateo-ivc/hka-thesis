@@ -2,10 +2,15 @@
 #import "@preview/acrostiche:0.7.0": acr, acrpl
 
 = Tests <tests>
+
+Dieses Kapitel weist nach, inwieweit die in @implementierung umgesetzte Bridge die in @analyse-und-entwurf abgeleiteten Anforderungen erfüllt. Alle Läufe finden auf dem in @testaufbau beschriebenen Messaufbau statt und werden nach den in @statistische-auswertung festgelegten Regeln ausgewertet.
+
+Die Tests bauen dabei aufeinander auf. Die Basisvalidierung prüft zunächst eine einzelne Bridge unter Idealbedingungen, anschließend wird die Kette schrittweise auf die maximal aufbaubare Länge erweitert und über mehrere Stunden hinweg beobachtet. Der abschließende Test verlässt die Idealbedingungen und untersucht das Verhalten unter definiert erzeugter Netzwerklast.
+
 == Basisvalidierung <basisvalidierung>
 Um eine umfangreiche Validierung der Bridge durchführen zu können, müssen zunächst die Grundlagen validiert werden, auf denen die nachfolgenden Tests aufbauen.
 
-Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen die #acr-emph("E2E")-Synchronisationsgenauigkeit #req("A4") sowie beide Frequenzanforderungen einhält. Die normative Messgenauigkeit der `neighborRateRatio` je Port #req("A3") und die Frequenzgenauigkeit des bridge-internen Zeitabgleichs #req("A8"). Darüber hinaus wird die `residenceTime` der Bridge vermessen, um zu beziffern, welchen Anteil am zulässigen Gesamtfehler die bridge-interne Synchronisierung tatsächlich beansprucht.
+Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen die #acr-emph("E2E")-Synchronisationsgenauigkeit #req("A4") sowie beide Frequenzanforderungen einhält: Die normative Messgenauigkeit der `neighborRateRatio` je Port #req("A3") und die Frequenzgenauigkeit des bridge-internen Zeitabgleichs #req("A8"). Darüber hinaus wird die `residenceTime` der Bridge vermessen, um zu beziffern, welchen Anteil am zulässigen Gesamtfehler die bridge-interne Synchronisierung tatsächlich beansprucht.
 
 === Testaufbau
 Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos, welche sowohl den Offset als auch die Frequenzabweichung zwischen den internen Clocks aufnimmt (siehe @bridge-sync-impl).
@@ -112,7 +117,7 @@ Alle Läufe finden unter denselben Idealbedingungen wie in @basisvalidierung sta
 
 Analog zur Basisvalidierung wird je Ausbaustufe zunächst der zeitliche Offsetverlauf und anschließend die Verteilung im eingeschwungenen Zustand betrachtet. Die 1. Stufe mit nur einer Bridge wurde bereits in @basisvalidierung ausgewertet. Die folgenden beiden Abschnitte ergänzen Stufe 2 und Stufe 3. Kanal 2 und 3 des Oszilloskops liegen dabei jeweils an Slave- und Master-Port der letzten Bridge in der Kette an, Kanal 4 durchgehend am Endpoint.
 
-*Stufe 2 (GM $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Endpoint)*
+*Stufe 2*
 
 #figure(
   image("../assets/Tests/bridge2_pps_offset.png", width: 100%),
@@ -128,7 +133,7 @@ Wie schon in der Basisvalidierung durchlaufen alle drei Messpunkte zu Beginn ein
 
 Im ausgewerteten Fenster ab $t_"set"$ liegen Median und Interquartilsabstand am Slave-Port von Bridge 2 bei $-5,8"ns"$ bzw. $58,3"ns"$ ($n=876$), am Master-Port bei $25,4"ns"$ bzw. $64,1"ns"$ ($n=840$) und am Endpoint bei $-288,0"ns"$ bzw. $70,7"ns"$ ($n=909$). Damit bleibt die #acr-emph("E2E")-Genauigkeit über drei Hops deutlich innerhalb des $1mu s$-Toleranzbands.
 
-*Stufe 3 (GM $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Bridge 3 $<->$ Endpoint)*
+*Stufe 3*
 
 #figure(
   image("../assets/Tests/bridge3_pps_offset.png", width: 100%),
@@ -146,7 +151,7 @@ Im eingeschwungenen Fenster liegen Median und Interquartilsabstand am Slave-Port
 
 === Einordnung und Ausblick
 
-Über alle drei Ausbaustufen hinweg bleibt die #acr-emph("E2E")-Synchronisationsgenauigkeit zum Grandmaster am Endpoint durchgehend innerhalb des geforderten $1mu s$-Toleranzbands: $-114"ns"$ bei zwei Hops, $-288"ns"$ bei drei Hops und $-428"ns"$ bei vier Hops. Der Zuwachs pro zusätzlicher Bridge beträgt damit rund $174"ns"$ (Stufe 1 $->$ 2) und rund $140"ns"$ (Stufe 2 $->$ 3), bei gleichzeitig moderat wachsender Streuung (Endpoint-IQR $65"ns"$, $70"ns"$, $82"ns"$).
+Über alle drei Ausbaustufen hinweg bleibt die #acr-emph("E2E")-Synchronisationsgenauigkeit zum Grandmaster am Endpoint durchgehend innerhalb des geforderten $1mu s$-Toleranzbands: $minus 114"ns"$ bei zwei Hops, $minus 288"ns"$ bei drei Hops und $minus 428"ns"$ bei vier Hops. Der Zuwachs pro zusätzlicher Bridge beträgt damit rund $174"ns"$ (Stufe 1 $->$ 2) und rund $140"ns"$ (Stufe 2 $->$ 3), bei gleichzeitig moderat wachsender Streuung (Endpoint-IQR $65"ns"$, $70"ns"$, $82"ns"$).
 
 Ein überlineares Anwachsen des Fehlers ist damit nicht erkennbar. Die beiden Zuwächse unterscheiden sich um $34"ns"$ und damit um weniger als den Interquartilsabstand am selben Messpunkt.
 

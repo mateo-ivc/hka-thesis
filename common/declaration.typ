@@ -23,7 +23,7 @@
 #line(length: 100%, stroke: (thickness: 0.5pt))
 #v(0.6em)
 
-Im Rahmen der Erstellung dieser Arbeit wurden generative KI-Werkzeuge in dem unten beschriebenen Umfang eingesetzt. Die Konzeption der Arbeit, der Aufbau und die Durchführung der Messungen sowie die Auswertung und Interpretation der Ergebnisse wurden eigenständig erarbeitet. Die Anpassungen am Zephyr-Quellcode wurden überwiegend eigenständig entwickelt. Bei der Analyse und Eingrenzung einzelner Fehler wurden KI-Werkzeuge unterstützend hinzugezogen. Sämtliche mit Unterstützung generativer KI erstellten oder überarbeiteten Inhalte wurden vor der Übernahme inhaltlich geprüft und, wo erforderlich, angepasst. Die Verantwortung für den Inhalt der Arbeit liegt vollständig beim Verfasser.
+Im Rahmen der Erstellung dieser Arbeit wurden generative KI-Werkzeuge in dem unten beschriebenen Umfang eingesetzt. Bei der Analyse und Eingrenzung einzelner Fehler wurden KI-Werkzeuge unterstützend hinzugezogen. Sämtliche mit Unterstützung generativer KI überarbeiteten Inhalte wurden vor der Übernahme inhaltlich geprüft und, wo erforderlich, angepasst. Die Verantwortung für den Inhalt der Arbeit liegt vollständig beim Verfasser.
 
 #v(0.8em)
 *Verwendete Hilfsmittel:*
