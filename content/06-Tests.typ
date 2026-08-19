@@ -13,28 +13,28 @@ Um eine umfangreiche Validierung der Bridge durchführen zu können, müssen zun
 Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmaster und Endpoint unter Idealbedingungen die #acr-emph("E2E")-Synchronisationsgenauigkeit #req("A4") sowie beide Frequenzanforderungen einhält: Die normative Messgenauigkeit der `neighborRateRatio` je Port #req("A3") und die Frequenzgenauigkeit des bridge-internen Zeitabgleichs #req("A8"). Darüber hinaus wird die `residenceTime` der Bridge vermessen, um zu beziffern, welchen Anteil am zulässigen Gesamtfehler die bridge-interne Synchronisation tatsächlich beansprucht.
 
 === Testaufbau
-Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur PPS-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos, welche sowohl den Offset als auch die Frequenzabweichung zwischen den internen Clocks aufnimmt (siehe @bridge-sync-impl).
+Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur #acr("PPS")-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos, welche sowohl den Offset als auch die Frequenzabweichung zwischen den internen Clocks aufnimmt (siehe @bridge-sync-impl).
 Zusätzlich wird in der Aufzeichnung die `neighborRateRatio` erfasst, die als Nachweis für die Frequenzabweichung zwischen den einzelnen PTP-Instanzen dient.
 
 === Ergebnisse
 
 #figure(
   image("../assets/Tests/pps_boxplot_basisvalidierung.png", width: 100%),
-  caption: [Basisvalidierung -- PPS-Offset als Boxplot],
+  caption: [Basisvalidierung -- #acr("PPS")-Offset als Boxplot],
 ) <fig-basisvalidierung-boxplot>
 
-Alle drei Messpunkte erreichen ihren eingeschwungenen Zustand $t_"set"$ früh im Lauf. Der Slave-Port der Bridge bei Segment $9$, der Master-Port bei Segment $31$ und der Endpoint bei Segment $69$. Ein Segment entspricht dabei einer #acr("PPS")-Periode und damit einer Sekunde Messzeit, sodass sich alle Segmentangaben unmittelbar als Sekunden seit Beginn des Laufs lesen lassen. Danach verbleiben alle drei Messpunkte durchgehend innerhalb des $1mu s$-Toleranzbands. Die Anforderung ist damit an allen drei Messpunkten erfüllt. Vor dem jeweiligen $t_"set"$ treten vereinzelte PPS-Ausfälle auf, die sich durch das Einschwingen der Synchronisation erklären lassen und nicht mehr in den Nachweis eingehen.
+Alle drei Messpunkte erreichen ihren eingeschwungenen Zustand $t_"set"$ früh im Lauf. Der Slave-Port der Bridge bei Segment $9$, der Master-Port bei Segment $31$ und der Endpoint bei Segment $69$. Ein Segment entspricht dabei einer #acr("PPS")-Periode und damit einer Sekunde Messzeit, sodass sich alle Segmentangaben unmittelbar als Sekunden seit Beginn des Laufs lesen lassen. Danach verbleiben alle drei Messpunkte durchgehend innerhalb des $1mu s$-Toleranzbands. Die Anforderung ist damit an allen drei Messpunkten erfüllt. Vor dem jeweiligen $t_"set"$ treten vereinzelte #acr("PPS")-Ausfälle auf, die sich durch das Einschwingen der Synchronisation erklären lassen und nicht mehr in den Nachweis eingehen.
 
 Die Boxplots in @fig-basisvalidierung-boxplot beziehen sich auf das jeweils gültige Fenster ab $t_"set"$. Median und Interquartilsabstand (die Spannweite der mittleren 50 % der Messwerte) liegen am Slave-Port bei $141"ns"$ bzw. $47"ns"$, am Master-Port bei $177"ns"$ bzw. $55"ns"$ und am Endpoint bei $-114"ns"$ bzw. $65"ns"$. An allen drei Messpunkten liegen sowohl der Median als auch die gesamte Box damit deutlich innerhalb des $1mu s$-Toleranzbands.
 
-Neben der PPS-basierten Synchronisationsgenauigkeit werden die beiden Frequenzanforderungen #req("A3") und #req("A8") überprüft. @fig-basisvalidierung-rate-ratio zeigt beide Größen über der Zeit.
+Neben der #acr("PPS")-basierten Synchronisationsgenauigkeit werden die beiden Frequenzanforderungen #req("A3") und #req("A8") überprüft. @fig-basisvalidierung-rate-ratio zeigt beide Größen über der Zeit.
 
 #figure(
   image("../assets/Tests/rate_ratio_allan_basisvalidierung.png", width: 100%),
   caption: [`neighborRateRatio` je Port und Ratenkorrektur des internen Servos],
 ) <fig-basisvalidierung-rate-ratio>
 
-Das Mittelungsintervall ergibt sich nach @nachweis-rateratio aus den Logzeitstempeln zu $tau_0 = 1,002"s"$ und entspricht damit dem pDelay-Intervall. @tab-basisvalidierung-rateratio fasst die Kennzahlen der drei Messreihen zusammen.
+Das Mittelungsintervall ergibt sich nach @nachweis-rateratio aus den Logzeitstempeln zu $tau_0 = 1,002"s"$ und entspricht damit dem _pDelay_-Intervall. @tab-basisvalidierung-rateratio fasst die Kennzahlen der drei Messreihen zusammen.
 
 #figure(
   table(
@@ -42,7 +42,13 @@ Das Mittelungsintervall ergibt sich nach @nachweis-rateratio aus den Logzeitstem
     align: (left, right, right, right, right, right, left),
     stroke: none,
     table.hline(),
-    tab-h[Messreihe], tab-h[$t_"set"$], tab-h[$n$], tab-h[Median], tab-h[IQR], tab-h[$sigma_y (tau_0)$], tab-h[Status],
+    tab-h[Messreihe],
+    tab-h[$t_"set"$],
+    tab-h[$n$],
+    tab-h[Median],
+    tab-h[#acr("IQR")],
+    tab-h[$sigma_y (tau_0)$],
+    tab-h[Status],
     table.hline(stroke: 0.5pt),
 
     tab-d[`neighborRateRatio` Master-Port],
@@ -123,14 +129,14 @@ Analog zur Basisvalidierung werden je Ausbaustufe zunächst der zeitliche Offset
 
 #figure(
   image("../assets/Tests/bridge2_pps_offset.png", width: 100%),
-  caption: [Stufe 2 -- PPS-Offset zum Grandmaster über der Zeit],
+  caption: [Stufe 2 -- #acr("PPS")-Offset zum Grandmaster über der Zeit],
 ) <fig-mehrhop-stufe2-verlauf>
 
 Wie schon in der Basisvalidierung durchlaufen alle drei Messpunkte zu Beginn eine Einschwingphase. Die Messpunkte erreichen ihren eingeschwungenen Zustand $t_"set"$ nicht gleichzeitig; spätestens bei Segment $45$ sind jedoch alle drei eingeschwungen. Danach verbleiben Slave- und Master-Port von Bridge 2 durchgehend in einem engen Band um den #acr("GM"), der Endpoint in einem dazu versetzten Band um rund $-290"ns"$.
 
 #figure(
   image("../assets/Tests/Bridge2_boxplot.png", width: 100%),
-  caption: [Stufe 2 -- PPS-Offset als Boxplot, eingeschwungener Zustand],
+  caption: [Stufe 2 -- #acr("PPS")-Offset als Boxplot, eingeschwungener Zustand],
 ) <fig-mehrhop-stufe2-boxplot>
 
 Im ausgewerteten Fenster ab $t_"set"$ liegen Median und Interquartilsabstand am Slave-Port von Bridge 2 bei $-5,8"ns"$ bzw. $58,3"ns"$ ($n=876$), am Master-Port bei $25,4"ns"$ bzw. $64,1"ns"$ ($n=840$) und am Endpoint bei $-288,0"ns"$ bzw. $70,7"ns"$ ($n=909$). Damit bleibt die #acr-emph("E2E")-Genauigkeit über drei Hops deutlich innerhalb des $1mu s$-Toleranzbands.
@@ -139,14 +145,14 @@ Im ausgewerteten Fenster ab $t_"set"$ liegen Median und Interquartilsabstand am 
 
 #figure(
   image("../assets/Tests/bridge3_pps_offset.png", width: 100%),
-  caption: [Stufe 3 -- PPS-Offset zum Grandmaster über der Zeit],
+  caption: [Stufe 3 -- #acr("PPS")-Offset zum Grandmaster über der Zeit],
 ) <fig-mehrhop-stufe3-verlauf>
 
 Die Einschwingphase fällt mit einem zusätzlichen Hop ähnlich zur Stufe 2 aus. Auch hier erreichen die drei Messpunkte $t_"set"$ nicht gleichzeitig: der Slave-Port von Bridge 3 bereits bei Segment $6$, der Master-Port erst bei Segment $45$; spätestens bei Segment $60$ sind alle drei eingeschwungen. Danach verbleiben alle drei Messpunkte durchgehend in einem stabilen, gegenüber Stufe 2 leicht nach unten verschobenen Band, ohne erkennbare Lücken oder wiederkehrende Ausreißer über den restlichen Lauf.
 
 #figure(
   image("../assets/Tests/bridge3_boxplot.png", width: 100%),
-  caption: [Stufe 3 -- PPS-Offset als Boxplot, eingeschwungener Zustand],
+  caption: [Stufe 3 -- #acr("PPS")-Offset als Boxplot, eingeschwungener Zustand],
 ) <fig-mehrhop-stufe3-boxplot>
 
 Im eingeschwungenen Fenster liegen Median und Interquartilsabstand am Slave-Port von Bridge 3 bei $-153"ns"$ bzw. $75"ns"$, am Master-Port bei $-113"ns"$ bzw. $81"ns"$ und am Endpoint bei $-428"ns"$ bzw. $82"ns"$. Auch nach vier Hops bleibt die #acr-emph("E2E")-Genauigkeit damit klar innerhalb der geforderten $1mu s$.
@@ -175,14 +181,14 @@ Der Aufbau entspricht Stufe 3 aus @mehrhop-validierung (#acr("GM") $<->$ Bridge 
 
 #figure(
   image("../assets/Tests/PPS-Offset-langzeit.png", width: 100%),
-  caption: [PPS-Offset zum Grandmaster über rund 6,5 Stunden],
+  caption: [#acr("PPS")-Offset zum Grandmaster über rund 6,5 Stunden],
 ) <fig-langzeit-verlauf>
 
 @fig-langzeit-verlauf zeigt den Offset aller Messpunkte über die gesamte Messdauer. Der Endpoint (violett) ist in jedem der zwölf Läufe vertreten und verbleibt durchgehend in einem stabilen Band von etwa $-600$ bis $-150"ns"$, ohne dass zwischen dem ersten Lauf bei $t approx 0"h"$ und dem letzten bei $t approx 6,4"h"$ ein erkennbarer Trend sichtbar wird. Auch an den rotierenden Messpunkten der drei Bridges zeigt sich innerhalb der ihnen jeweils zugeordneten vier Läufe keine fortschreitende Verschiebung. In allen zwölf Messfenstern blieb die Synchronisation somit über den gesamten Zeitraum von rund 6,5 Stunden erhalten. Zudem macht sich kein Drift bemerkbar, der erst über Stunden hinweg sichtbar würde.
 
 #figure(
   image("../assets/Tests/boxplot_langzeit.png", width: 100%),
-  caption: [PPS-Offset als Boxplot über die gesamte Langzeitmessung],
+  caption: [#acr("PPS")-Offset als Boxplot über die gesamte Langzeitmessung],
 ) <fig-langzeit-boxplot>
 
 @fig-langzeit-boxplot fasst dieselben Daten je Messpunkt über die gesamte Langzeitmessung als Boxplot zusammen. Median und Interquartilsabstand liegen am Slave- bzw. Master-Port von Bridge 1 bei $122,8"ns"$/$39,7"ns"$ und $155,6"ns"$/$45,6"ns"$, an Bridge 2 bei $-24,9"ns"$/$55,2"ns"$ und $7,2"ns"$/$63,4"ns"$, an Bridge 3 bei $-153,4"ns"$/$76,9"ns"$ und $-119,9"ns"$/$83,2"ns"$, und am Endpoint bei $-420,1"ns"$/$94,4"ns"$. Wie schon in @mehrhop-validierung wächst die Streuung mit jedem zusätzlichen Hop leicht an, bleibt aber selbst am Endpoint mit einem IQR von rund $94"ns"$ klein gegenüber dem $1mu s$-Toleranzband. Vereinzelte Ausreißer (rote Kreise) treten an allen Messpunkten auf, verlassen das Toleranzband jedoch nie und zählen damit nach @statistische-auswertung nicht als Verletzung der Anforderung.
@@ -250,7 +256,7 @@ Konfiguration A wurde über $1000"s"$ mit $1"kB"$ großen Paketen und einem stuf
     tab-d[Effektiver Durchsatz], tab-d[5,00 Mbit/s], tab-d[10,00 Mbit/s], tab-d[10,64 Mbit/s],
     table.hline(stroke: 0.2pt + luma(80)),
 
-    tab-d[Jitter], tab-d[204 µs], tab-d[755 µs], tab-d[1,00 ms],
+    tab-d[Jitter], tab-d[204 µs], tab-d[755 µs], tab-d[$1,00m s$],
     table.hline(),
   ),
   caption: [`zperf`-UDP-Lasttest in Konfiguration A],
@@ -258,7 +264,7 @@ Konfiguration A wurde über $1000"s"$ mit $1"kB"$ großen Paketen und einem stuf
 
 #figure(
   image("../assets/Tests/pps_offset_netzwerklast_ohne_cbs.png", width: 100%),
-  caption: [PPS-Offset und Netzwerklast ohne Priorisierung],
+  caption: [#acr("PPS")-Offset und Netzwerklast ohne Priorisierung],
 ) <fig-pps-netzwerklast-ohne-cbs>
 
 @fig-pps-netzwerklast-ohne-cbs stellt beide Größen über einer gemeinsamen Zeitachse dar. Über die ersten beiden Laststufen verhält sich das System unauffällig. Die Bridge verarbeitet den eingehenden Verkehr nahezu vollständig, der Drop-Anteil liegt nahezu durchgehend bei null, und die drei Messpunkte verbleiben in einem engen, gemeinsamen Band -- Slave- und Master-Port von Bridge 1 zwischen etwa $50$ und $250"ns"$, der Endpoint spiegelbildlich zwischen $-50$ und $-250"ns"$. Der Lastwechsel bei $t approx 300"s"$ hinterlässt im Offset-Verlauf keine erkennbare Spur.
@@ -276,12 +282,12 @@ Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde
 
 #figure(
   image("../assets/Tests/pps_offset_netzwerklast_cbs.png", width: 100%),
-  caption: [PPS-Offset und Netzwerklast mit Priorisierung],
+  caption: [#acr("PPS")-Offset und Netzwerklast mit Priorisierung],
 ) <fig-pps-netzwerklast-cbs>
 
 @fig-pps-netzwerklast-cbs zeigt beide Größen über einer gemeinsamen Zeitachse. Entscheidend ist der Vergleich mit @fig-pps-netzwerklast-ohne-cbs, denn die Bridge steht hier unter deutlich höherer Last. Bereits die erste Stufe entspricht mit rund $14"Mbit/s"$ genau jener Rate, bei der die Synchronisation in Konfiguration A zusammenbrach, und die dritte liegt mit $42"Mbit/s"$ um den Faktor drei darüber. Der Nutzverkehr leidet entsprechend. Schon in der ersten Stufe verwirft die Bridge rund ein Drittel der eingehenden Pakete, in den beiden höheren Stufen etwa die Hälfte. Der Anteil verworfener #acr("gPTP")-Frames bleibt dabei über die gesamte Messdauer bei null -- genau die Trennung, die in Konfiguration A fehlte.
 
-Im Offset-Verlauf ist von alledem nichts zu sehen. Beide Bridge-1-Messpunkte verbleiben durchgehend in einem gemeinsamen Band von rund $60$ bis $230"ns"$, der Endpoint spiegelbildlich zwischen etwa $-80$ und $-300"ns"$. Die Lastwechsel bei $t approx 300"s"$ und $t approx 600"s"$ hinterlassen keine erkennbare Reaktion, und die mittleren Abweichungen zum Grandmaster liegen mit $116$, $145$ und $156"ns"$ in derselben Größenordnung wie in der ungestörten Phase aus @fig-pps-netzwerklast-ohne-cbs. Vor allem aber ist die Messreihe lückenlos. Es fehlen keine #acr-emph("PPS")-Flanken, und der Offset bleibt über die gesamten $1000"s"$ in demselben Band, statt wie in Konfiguration A über die Sekundengrenze hinaus wegzulaufen.
+Im Offset-Verlauf ist von alledem nichts zu sehen. Beide Bridge-1-Messpunkte verbleiben durchgehend in einem gemeinsamen Band von rund $60$ bis $230"ns"$, der Endpoint spiegelbildlich zwischen etwa $-80$ und $-300n s$. Die Lastwechsel bei $t approx 300s$ und $t approx 600s$ hinterlassen keine erkennbare Reaktion, und die mittleren Abweichungen zum Grandmaster liegen mit $116$, $145$ und $156n s$ in derselben Größenordnung wie in der ungestörten Phase aus @fig-pps-netzwerklast-ohne-cbs. Vor allem aber ist die Messreihe lückenlos. Es fehlen keine #acr-emph("PPS")-Flanken, und der Offset bleibt über die gesamten $1000s$ in demselben Band, statt wie in Konfiguration A über die Sekundengrenze hinaus wegzulaufen.
 
 === Pufferversorgung des gPTP-Pfads <ergebnisse-pufferversorgung>
 Die #acr("PPS")-Messung zeigt, dass die Synchronisation in Konfiguration B unter Last erhalten bleibt. Sie zeigt jedoch nicht, warum. Dafür wurde parallel der in @nachweis-pufferversorgung festgelegte Zähler `alloc_fail_ptp` sekündlich mitgeloggt, ergänzt um den allgemeinen Allokationszähler `alloc_fail` als Kontext. @tab-pufferversorgung stellt den Zuwachs beider Zähler auf der belasteten Instanz (`enet1g`) über die Messdauer gegenüber.
