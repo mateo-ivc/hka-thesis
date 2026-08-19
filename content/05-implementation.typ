@@ -152,8 +152,7 @@ Die Erweiterung des Treibers ist über `CONFIG_ETH_NXP_ENET_1G_AVB` schaltbar un
 Die eigentliche Konfiguration des Shapers erfolgt beim Zurücksetzen des #acr("MAC"). Der Parameter `idleSlope` legt dabei die für Ring 1 garantierte Bandbreite fest. Die verwendete Konfiguration reserviert dafür rund $20%$ der gesamten Linkbandbreite.
 
 #figure(
-  c-listing(
-    "1\n2\n3\n4\n5\n6\n7\n8\n9\n10",
+  diff-listing(
     "if (config->avb_capable) {\n"
       + "     enet_avb_config_t avb_config = {\n"
       + "          .rxClassifyMatch = {\n"

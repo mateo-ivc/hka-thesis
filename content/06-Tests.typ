@@ -109,7 +109,7 @@ Um den Beitrag jeder einzelnen Bridge isolieren zu können, wird die Kette Bridg
     table.hline(),
     tab-h[Stufe], tab-h[Kette], tab-h[Hops],
     table.hline(stroke: 0.5pt),
-    tab-d[2], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Endpoint], tab-d[1],
+    tab-d[1], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Endpoint], tab-d[2],
     table.hline(stroke: 0.2pt + luma(80)),
     tab-d[2], tab-d[#acr("GM") $<->$ Bridge 1 $<->$ Bridge 2 $<->$ Endpoint], tab-d[3],
     table.hline(stroke: 0.2pt + luma(80)),
