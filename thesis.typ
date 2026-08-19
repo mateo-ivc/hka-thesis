@@ -145,13 +145,18 @@
 #openright()
 
 // Table of contents
+// vspace: extra spacing above each chapter entry (level 1). The preset value
+// of the outrageous package is 12pt; it is reduced here so that the last entry
+// ("Literaturverzeichnis") still fits on the second page of the table of
+// contents instead of starting a third page on its own.
 #show outline.entry: outrageous.show-entry.with(
   ..outrageous.presets.outrageous-toc,
+  vspace: (8pt, none),
   fill: (none, line(length: 100%, stroke: (thickness: 1pt, dash: "loosely-dotted"))),
 )
 
 #text(size: 21pt, font: "Arial")[*Inhaltsverzeichnis*]
-#v(20pt)
+#v(12pt)
 
 #outline(title: none, indent: auto)
 #openright()
