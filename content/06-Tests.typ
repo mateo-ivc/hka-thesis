@@ -14,7 +14,7 @@ Ziel des Tests ist es nachzuweisen, dass eine einzelne Bridge zwischen Grandmast
 
 === Testaufbau
 Der Aufbau folgt der Kette Grandmaster $<->$ Bridge 1 $<->$ Endpoint mit der Kanalbelegung #acr("GM"), Slave-Port und Master-Port der Bridge sowie dem Endpoint. Zeitgleich zur #acr("PPS")-Aufnahme läuft eine Logging-Aufzeichnung des bridge-internen Servos, welche sowohl den Offset als auch die Frequenzabweichung zwischen den internen Clocks aufnimmt (siehe @bridge-sync-impl).
-Zusätzlich wird in der Aufzeichnung die `neighborRateRatio` erfasst, die als Nachweis für die Frequenzabweichung zwischen den einzelnen PTP-Instanzen dient.
+Zusätzlich wird in der Aufzeichnung die `neighborRateRatio` erfasst, die als Nachweis für die Frequenzabweichung zwischen den einzelnen #acr("PTP")-Instanzen dient.
 
 === Ergebnisse
 
@@ -66,7 +66,7 @@ Das Mittelungsintervall ergibt sich nach @nachweis-rateratio aus den Logzeitstem
   caption: [Frequenzgenauigkeit der Einzelbridge, alle Werte in #acr("ppb")],
 ) <tab-basisvalidierung-rateratio>
 
-Alle drei Messreihen unterschreiten den geforderten Grenzwert von $0,1$ #acr("ppm") ($100$#acr("ppb")) deutlich. Bei der `neighborRateRatio` gilt das für beide Fehleranteile. Der Median liegt an beiden Ports betragsmäßig bei $1$#acr("ppb"), ein systematischer Messfehler besteht also nicht. Der Median der Servo-Reihe ist dagegen keine Fehlergröße, sondern die Stellgröße. Die Ratenkorrektur der Master-Instanz liegt bei ca. $84$ ppm. Durch die gemeinsame Taktquelle beider PTP-Timer (@board-anpassungen) spiegelt dies keinen Quarzversatz wider, sondern die nachzuregelnde #acr("gPTP")-Syntonisierung der Master-Instanz. Relevant für #req("A8") sind daher primär die Restinstabilität von 28,5 #acr("ppb") sowie der Phasenfehler. Bemerkenswert ist, dass der bridge-interne Servo bei diesem Mittelungsintervall stabiler arbeitet als beide Berechnungen des #acr("gPTP")-Stacks.
+Alle drei Messreihen unterschreiten den geforderten Grenzwert von $0,1$ #acr("ppm") ($100$#acr("ppb")) deutlich. Bei der `neighborRateRatio` gilt das für beide Fehleranteile. Der Median liegt an beiden Ports betragsmäßig bei $1$#acr("ppb"), ein systematischer Messfehler besteht also nicht. Der Median der Servo-Reihe ist dagegen keine Fehlergröße, sondern die Stellgröße. Die Ratenkorrektur der Master-Instanz liegt bei ca. $84$ ppm. Durch die gemeinsame Taktquelle beider #acr("PTP")-Timer (@board-anpassungen) spiegelt dies keinen Quarzversatz wider, sondern die nachzuregelnde #acr("gPTP")-Syntonisierung der Master-Instanz. Relevant für #req("A8") sind daher primär die Restinstabilität von 28,5 #acr("ppb") sowie der Phasenfehler. Bemerkenswert ist, dass der bridge-interne Servo bei diesem Mittelungsintervall stabiler arbeitet als beide Berechnungen des #acr("gPTP")-Stacks.
 
 Die Einschwingzeiten unterscheiden sich erheblich, was die in @nachweis-rateratio begründete Einzelbestimmung rechtfertigt. Der Slave-Port benötigt mit $150,9"s"$ gut das Achtfache des Master-Ports. Seine Syntonisierung verharrt über rund zwei Minuten auf einem stabilen Plateau bei $approx 3800$#acr("ppb"), bevor sie endgültig einrastet (siehe @fig-basisvalidierung-rate-ratio).
 
@@ -289,7 +289,7 @@ Derselbe Lauf wurde anschließend mit Konfiguration B wiederholt. Die Last wurde
 
 Im Offset-Verlauf ist von alledem nichts zu sehen. Beide Bridge-1-Messpunkte verbleiben durchgehend in einem gemeinsamen Band von rund $60$ bis $230"ns"$, der Endpoint spiegelbildlich zwischen etwa $-80$ und $-300n s$. Die Lastwechsel bei $t approx 300s$ und $t approx 600s$ hinterlassen keine erkennbare Reaktion, und die mittleren Abweichungen zum Grandmaster liegen mit $116$, $145$ und $156n s$ in derselben Größenordnung wie in der ungestörten Phase aus @fig-pps-netzwerklast-ohne-cbs. Vor allem aber ist die Messreihe lückenlos. Es fehlen keine #acr-emph("PPS")-Flanken, und der Offset bleibt über die gesamten $1000s$ in demselben Band, statt wie in Konfiguration A über die Sekundengrenze hinaus wegzulaufen.
 
-=== Pufferversorgung des gPTP-Pfads <ergebnisse-pufferversorgung>
+=== Pufferversorgung des #acr("gPTP")-Pfads <ergebnisse-pufferversorgung>
 Die #acr("PPS")-Messung zeigt, dass die Synchronisation in Konfiguration B unter Last erhalten bleibt. Sie zeigt jedoch nicht, warum. Dafür wurde parallel der in @nachweis-pufferversorgung festgelegte Zähler `alloc_fail_ptp` sekündlich mitgeloggt, ergänzt um den allgemeinen Allokationszähler `alloc_fail` als Kontext. @tab-pufferversorgung stellt den Zuwachs beider Zähler auf der belasteten Instanz (`enet1g`) über die Messdauer gegenüber.
 
 #figure(
@@ -301,7 +301,7 @@ Die #acr("PPS")-Messung zeigt, dass die Synchronisation in Konfiguration B unter
     tab-h[Zähler], tab-h[Konfiguration A], tab-h[Konfiguration B],
     table.hline(stroke: 0.5pt),
 
-    tab-d[`alloc_fail_ptp` (gPTP-Pfad)], tab-d[nicht vorhanden], tab-d[0],
+    tab-d[`alloc_fail_ptp` (#acr("gPTP")-Pfad)], tab-d[nicht vorhanden], tab-d[0],
     table.hline(stroke: 0.2pt + luma(80)),
 
     tab-d[`alloc_fail` (gesamt)], tab-d[102.739], tab-d[1.440.173],

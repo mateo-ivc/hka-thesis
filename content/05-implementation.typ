@@ -22,7 +22,7 @@ Die Initialisierung der #acr("PTP")-Clock wurde angepasst. Zuvor konfiguriert de
       + "+CLOCK_SetRootClock(kCLOCK_Root_Enet_Timer2, &rootCfg);",
     width: 100%,
   ),
-  caption: [PTP-Clock-Konfiguration],
+  caption: [#acr("PTP")-Clock-Konfiguration],
 ) <lst:PTP-Clock_config>
 
 Ein einzelner, gemeinsam genutzter #acr("PTP")-Timer für beide Ports ist dabei keine Alternative. In klassischen Switch-ICs, deren Ports über eine gemeinsame, integrierte Switching-Fabric verbunden sind, verteilt genau eine zentrale Clock ihren Zählerstand intern an die Timestamp-Einheiten aller Ports, sodass sich eine zusätzliche Synchronisation zwischen den Ports von vornherein erübrigt. Auf dem hier eingesetzten #acr-emph("SoC") ist dieser Weg jedoch nicht umsetzbar. Die beiden Instanzen `enet` und `enet1g` verfügen jeweils über eine eigene #acr("MAC")-Peripherie. Dementsprechend besitzt jede auch einen eigenen #acr("PTP")-Timer, der laut Clock-Baum des Referenzhandbuchs fest mit genau einem eigenen Taktausgang der Clock-Control-Einheit verschaltet ist (`ENET_TIMER1` bzw. `ENET_TIMER2`) @nxp_imxrt1170_refman[15.3]. Einen internen Pfad, über den sich einer der beiden Taktausgänge zusätzlich zur jeweils anderen Instanz routen ließe, sieht die Hardware nicht vor. Eine Instanz kann folglich nicht an die Clock der anderen angeschlossen werden, weshalb zwei separate Clocks konfiguriert werden müssen und weshalb überhaupt erst die in @testaufbau beschriebene bridge-interne Synchronisation der beiden Timer notwendig wird.
@@ -37,7 +37,7 @@ Die Synchronisationsarchitektur sieht dabei wie folgt aus. Der #acr("gPTP")-Slav
 
 Um diese Hardware-Events softwareseitig zu verarbeiten, wurde die #acr-emph("ISR") `ptp_clock_nxp_enet_isr()` erweitert. Tritt nun eines der beiden Events ein, liest die #acr("ISR") den exakten Hardware-Zeitstempel aus und übergibt ihn über eine Message-Queue an einen Task. Dies schafft die notwendige Datengrundlage, um beide Timer im Anschluss präzise miteinander zu synchronisieren.
 
-=== Änderungen im gPTP-Subsystem
+=== Änderungen im #acr("gPTP")-Subsystem
 *Synchronisationsaussetzer durch blockierte #acr("gPTP")-Ports*\
 Beim Senden einer Nachricht, die einen exakten Sendezeitpunkt benötigt, z. B. einer Sync-Nachricht, wird dieser Zeitstempel im #acr("gPTP")-Subsystem für die Erstellung der #emph[Follow\_Up]-Nachricht benötigt. Aufgenommen wird der Zeitstempel jedoch erst im #acr("MAC"). Um ihn aus dem unteren Layer in den Netzwerkstack zu bekommen, löst Zephyr dies über Callbacks. Beim Senden einer solchen Nachricht wird für den jeweiligen Port ein Callback registriert, der mit dem konkreten Paket verknüpft ist.
 
@@ -122,7 +122,7 @@ Da die `rateRatio` unmittelbar in die Skalierung der `residenceTime` und damit i
 
 
 == Implementierung der Bridge-Synchronisation <bridge-sync-impl>
-Das im Folgenden beschriebene Verfahren ist keine im Standard 802.1AS vorgesehene Funktion, sondern eine Board-spezifische Ergänzung, um das in @testaufbau beschriebene Problem mit den unabhängigen PTP-Clocks zu lösen. Umgesetzt wird sie durch einen eigenen Task, der den Master-Port des Systems zum Slave-Port synchronisiert.
+Das im Folgenden beschriebene Verfahren ist keine im Standard 802.1AS vorgesehene Funktion, sondern eine Board-spezifische Ergänzung, um das in @testaufbau beschriebene Problem mit den unabhängigen #acr("PTP")-Clocks zu lösen. Umgesetzt wird sie durch einen eigenen Task, der den Master-Port des Systems zum Slave-Port synchronisiert.
 
 In @board-anpassungen wurde bereits beschrieben, wie die Timer-Instanzen konfiguriert sind. Der Timer der `enet1g`-Instanz vergleicht dabei fortlaufend seinen aktuellen Zählerstand mit dem im Register `ENET_TCCRn` definierten Wert. Sobald es zum Sekundenrollover kommt, speichert dieser Timer seinen aktuellen Zählerstand in einem Register und versendet einen #acr("PPS")-Impuls. Die `enet`-Instanz wiederum speichert ihren aktuellen Zählerstand, sobald sie das #acr("PPS")-Signal per Capture-Event erfasst.
 Zusätzlich lösen beide Events einen Interrupt aus. Diese #acr("ISR") ermöglicht es, beide Hardware-Zeitstempel über eine Message-Queue an den Synchronisations-Task zu übergeben.
@@ -132,14 +132,14 @@ Der Task berechnet aus den beiden Zeitstempeln einen einfachen Phasenfehler (Sla
 Aus dem Phasenfehler berechnet der Regler eine Korrektur in #acr-emph("ppb"), mit der sich die Zählrate der Master-Instanz schrittweise an die der Slave-Instanz annähert.
 
 
-== Priorisierung der gPTP-Nachrichten <impl-lastschutz>
+== Priorisierung der #acr("gPTP")-Nachrichten <impl-lastschutz>
 Die bisher beschriebenen Änderungen stellen sicher, dass die Synchronisation in einem ansonsten unbelasteten Netz zuverlässig arbeitet. Sobald über denselben physischen Port zusätzlich Best-Effort-Nutzverkehr läuft, konkurriert dieser jedoch mit den #acr("gPTP")-Nachrichten um dieselben Ressourcen. Problematisch ist dabei weniger der Zeitstempel selbst, der auch bei einer verspäteten Nachricht korrekt bliebe, als vielmehr, dass die beteiligten Zustandsmaschinen nur ein enges Zeitfenster für dessen Eintreffen vorsehen. Wird dieses Fenster durch die Last überschritten, behandelt die Implementierung die Nachricht als verloren und verwirft sie. Genau hier entscheidet sich, ob die Bridge die in @normative-leistungsanforderungen geforderte Genauigkeit auch unter Last hält und damit die in @anforderung-netzwerklast beschriebene Vorbedingung der #acr-emph("E2E")-Synchronisationsgenauigkeit erfüllt.
 
 Der in @cbs beschriebene #acr("CBS") ist einer der dafür vorgesehenen Mechanismen. Die von NXP bereitgestellte #acr-emph("HAL") macht ihn über `ENET_AVBConfigure()` zugänglich @nxp_mcuxpresso_enet. Zephyrs ENET-Treiber nutzt diese Funktion allerdings nicht. Dieser betreibt für jede ENET-Instanz ausschließlich den Best-Effort-Ring 0, sodass sämtlicher Verkehr, #acr("gPTP") wie Nutzlast, denselben Ring teilt. Die Anbindung des #acr("CBS") musste daher im Treiber selbst ergänzt werden.
 
 Der Shaper allein genügt jedoch nicht. Er reserviert ausschließlich die Sendebandbreite. Die Last trifft die Bridge in diesem Aufbau aber überwiegend am Eingang, also im Empfangspfad. Dort entscheidet sich vor allem, ob ein #acr("gPTP")-Frame überhaupt bis zum #acr("gPTP")-Stack gelangt und ob im Moment seines Eintreffens noch Platz im Netzwerkpuffer ist. Die folgenden Unterabschnitte beschreiben deshalb drei aufeinander aufbauende Ebenen. Die Kennzeichnung der #acr("gPTP")-Nachrichten als eigene Verkehrsklasse, deren Bevorzugung auf dem Sendepfad durch den #acr("CBS") und deren Absicherung auf dem Empfangspfad.
 
-=== Kennzeichnung der gPTP-Nachrichten
+=== Kennzeichnung der #acr("gPTP")-Nachrichten
 Je nach Hardware können die #acr("gPTP")-Nachrichten direkt im #acr("MAC") erkannt und priorisiert werden. Mit der eingesetzten Hardware ist dies nicht möglich, weshalb VLAN-Tags verwendet werden, um die Nachrichten zu kennzeichnen. Wie in @cbs beschrieben, entscheidet darüber der 3-Bit breite Priority-Code-Point im VLAN-Tag. Zephyrs #acr("gPTP")-Subsystem versendet seine Nachrichten jedoch grundsätzlich ungetaggt, was sie für die #acr("MAC")-Schicht ununterscheidbar vom Best-Effort-Verkehr macht.
 
 In der Kconfig wurden daher die beiden Optionen `CONFIG_NET_GPTP_VLAN_TAG` und `CONFIG_NET_GPTP_VLAN_PRIORITY` ergänzt. Ist ein VLAN-Tag konfiguriert, aktiviert `gptp_add_port()` das #acr("VLAN") auf jedem als Port registrierten Interface. `setup_gptp_frame()` versieht alle ausgehenden #acr("gPTP")-Nachrichten mit diesem Tag und dem konfigurierten Priority-Code-Point (im Testaufbau der höchste Wert 7). Der übrige Verkehr auf demselben physischen Interface bleibt davon unberührt und weiterhin ungetaggt.
@@ -215,7 +215,7 @@ Zephyr kann eingehende Pakete anhand einer im Treiber zugewiesenen Priorität au
       + " }",
     width: 100%,
   ),
-  caption: [Zuordnung empfangener PTP-Frames zur Verkehrsklasse],
+  caption: [Zuordnung empfangener #acr("PTP")-Frames zur Verkehrsklasse],
 ) <lst:rx-traffic-class>
 
 *Reservierung von Empfangspuffern*\
@@ -264,7 +264,7 @@ Bewusst ist dieser Pool nicht an den AVB-Ring gekoppelt, sondern an das Vorhande
     tab-h[Maßnahme], tab-h[Ebene], tab-h[Konfiguration],
     table.hline(stroke: 0.5pt),
     tab-d[Prioritätskennzeichnung über VLAN-Tags],
-    tab-d[gPTP-Subsystem],
+    tab-d[#acr("gPTP")-Subsystem],
     tab-d[`NET_GPTP_VLAN_TAG`, `NET_GPTP_VLAN_PRIORITY`],
     table.hline(stroke: 0.2pt + luma(80)),
 
@@ -288,5 +288,5 @@ Bewusst ist dieser Pool nicht an den AVB-Ring gekoppelt, sondern an das Vorhande
     tab-d[`ETH_NXP_ENET_PTP_RX_PKTS`, `ETH_NXP_ENET_PTP_RX_BUFS`],
     table.hline(),
   ),
-  caption: [Maßnahmen zum Schutz der gPTP-Verkehrsklasse unter Netzwerklast],
+  caption: [Maßnahmen zum Schutz der #acr("gPTP")-Verkehrsklasse unter Netzwerklast],
 ) <tab-lastschutz-massnahmen>
